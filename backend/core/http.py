@@ -1,0 +1,155 @@
+"""Briques communes des vues JSON.
+
+Le projet n'utilise pas Django REST Framework : DRF est une bibliotheque tierce
+qui n'appartient pas a Django officiel, et le sujet demande de justifier chaque
+dependance. Ces quelques helpers couvrent tout ce dont l'API a besoin, avec un
+controle total sur la validation — ce qui est precisement ce que le sujet exige
+(« implement some form of validation for forms and any user input [...] on the
+server side »).
+"""
+
+from __future__ import annotations
+
+import functools
+import json
+from typing import Any, Callable, Iterable
+
+from django.http import HttpRequest, HttpResponse, JsonResponse
+
+# Taille maximale d'un corps JSON. Les avatars passent par du multipart, pas
+# par ce chemin : 64 Kio suffisent largement et bornent la consommation memoire.
+MAX_JSON_BYTES = 64 * 1024
+
+
+class ApiError(Exception):
+    """Erreur applicative convertie en reponse JSON par JsonErrorMiddleware."""
+
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        status: int = 400,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.status = status
+        self.details = details or {}
+
+    def to_response(self) -> JsonResponse:
+        return json_error(self.code, self.message, self.status, self.details)
+
+
+def json_ok(data: Any = None, status: int = 200) -> JsonResponse:
+    """Reponse de succes. `safe=False` autorise les listes a la racine."""
+    return JsonResponse(data if data is not None else {}, status=status, safe=False)
+
+
+def json_error(
+    code: str,
+    message: str,
+    status: int = 400,
+    details: dict[str, Any] | None = None,
+) -> JsonResponse:
+    """Forme d'erreur unique pour toute l'API.
+
+    Le frontend n'a ainsi qu'un seul format a interpreter, et `code` reste
+    stable meme si `message` est reformule ou traduit.
+    """
+    payload: dict[str, Any] = {"error": {"code": code, "message": message}}
+    if details:
+        payload["error"]["details"] = details
+    return JsonResponse(payload, status=status)
+
+
+def read_json(request: HttpRequest, *, max_bytes: int = MAX_JSON_BYTES) -> dict[str, Any]:
+    """Decode le corps JSON d'une requete, ou leve une ApiError explicite."""
+    body = request.body
+    if len(body) > max_bytes:
+        raise ApiError("payload_too_large", "Corps de requete trop volumineux.", 413)
+    if not body:
+        return {}
+    try:
+        data = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise ApiError("invalid_json", "Corps de requete JSON invalide.", 400) from None
+    if not isinstance(data, dict):
+        raise ApiError("invalid_json", "Le corps JSON doit etre un objet.", 400)
+    return data
+
+
+def require_methods(*methods: str) -> Callable:
+    """Restreint une vue a une liste de verbes HTTP.
+
+    Equivalent de `django.views.decorators.http.require_http_methods`, mais qui
+    repond en JSON plutot qu'en HTML.
+    """
+    allowed = {m.upper() for m in methods}
+    if "OPTIONS" not in allowed:
+        allowed.add("OPTIONS")
+
+    def decorator(view: Callable[..., HttpResponse]) -> Callable[..., HttpResponse]:
+        @functools.wraps(view)
+        def wrapper(request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+            if request.method == "OPTIONS":
+                response = HttpResponse(status=204)
+                response["Allow"] = ", ".join(sorted(allowed))
+                return response
+            if request.method not in allowed:
+                response = json_error(
+                    "method_not_allowed",
+                    f"Methode {request.method} non autorisee sur cette route.",
+                    405,
+                )
+                response["Allow"] = ", ".join(sorted(allowed))
+                return response
+            return view(request, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def login_required(view: Callable[..., HttpResponse]) -> Callable[..., HttpResponse]:
+    """Refuse l'acces si JWTAuthenticationMiddleware n'a authentifie personne.
+
+    Le sujet insiste : « if you opt to create an API, ensure your routes are
+    protected ». Toute route non publique porte ce decorateur.
+    """
+
+    @functools.wraps(view)
+    def wrapper(request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        user = getattr(request, "user", None)
+        if user is None or not getattr(user, "is_authenticated", False):
+            # JWTAuthenticationMiddleware renseigne `auth_error` en resolvant
+            # l'utilisateur. Distinguer `token_expired` du reste permet au
+            # frontend de tenter un rafraichissement silencieux plutot que de
+            # deconnecter l'utilisateur au moindre jeton perime.
+            code = getattr(request, "auth_error", None) or "unauthorized"
+            message = ("Jeton expire." if code == "token_expired"
+                       else "Authentification requise.")
+            return json_error(code, message, 401)
+        return view(request, *args, **kwargs)
+
+    return wrapper
+
+
+def paginate(queryset: Iterable, request: HttpRequest, *, default: int = 20,
+             maximum: int = 100) -> tuple[list, dict[str, int]]:
+    """Pagination par decalage, bornee pour eviter les requetes abusives."""
+    try:
+        limit = int(request.GET.get("limit", default))
+    except (TypeError, ValueError):
+        limit = default
+    try:
+        offset = int(request.GET.get("offset", 0))
+    except (TypeError, ValueError):
+        offset = 0
+
+    limit = max(1, min(limit, maximum))
+    offset = max(0, offset)
+
+    total = queryset.count() if hasattr(queryset, "count") else len(list(queryset))
+    items = list(queryset[offset:offset + limit])
+    return items, {"total": total, "limit": limit, "offset": offset}

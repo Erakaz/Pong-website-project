@@ -1,0 +1,98 @@
+/* Surcouche minimale de Bootstrap : le toolkit fait le gros du travail
+   (module « front-end toolkit »), on ne redefinit que l'identite Pong. */
+
+:root {
+  --ftt-court: #0b0e14;
+  --ftt-line: #29313f;
+  --ftt-accent: #7bdcb5;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(123, 220, 181, 0.08), transparent 60%),
+    var(--ftt-court);
+}
+
+/* Le lien d'evitement n'apparait qu'au clavier : premiere touche Tab de la
+   page, il permet de sauter la navigation. */
+.skip-link {
+  position: absolute;
+  z-index: 1080;
+  margin: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  background: var(--bs-body-bg);
+}
+
+/* Marque de la barre de navigation : une balle de Pong. */
+.brand-mark {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-right: 0.35rem;
+  background: var(--ftt-accent);
+  vertical-align: middle;
+}
+
+.navbar {
+  background: rgba(11, 14, 20, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: var(--ftt-line);
+}
+
+/* Le contenu principal recoit le focus a chaque navigation (voir router.js) :
+   sans cela le contour de focus clignoterait sur toute la zone. */
+#app:focus {
+  outline: none;
+}
+
+/* Terrain de jeu — utilise a partir du module Pong. */
+.pong-court {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+  aspect-ratio: 4 / 3;
+  background: #05070b;
+  border: 2px solid var(--ftt-line);
+  border-radius: 0.5rem;
+  /* Le rendu est en pixels entiers : le lissage flouterait les raquettes. */
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+/* Tableau de score au-dessus du terrain — lisible et accessible, contrairement
+   au score dessine dans le canvas. */
+.scoreboard {
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.scoreboard .player-name {
+  font-size: 0.95rem;
+  color: var(--bs-secondary-color);
+  overflow-wrap: anywhere;
+}
+
+.scoreboard .score-value {
+  display: block;
+  font-family: "Courier New", monospace;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Respecte le reglage systeme « reduire les animations ». */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

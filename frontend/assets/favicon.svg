@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="ft_transcendence">
+  <rect width="32" height="32" rx="6" fill="#0b0e14"/>
+  <rect x="5" y="9" width="3" height="14" rx="1.5" fill="#7bdcb5"/>
+  <rect x="24" y="6" width="3" height="14" rx="1.5" fill="#7bdcb5"/>
+  <circle cx="16" cy="16" r="3" fill="#f5f7fa"/>
+</svg>

@@ -1,2 +1,20 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Fins de ligne forcees en LF partout.
+#
+# Sans cela, un poste Windows convertit les fichiers en CRLF au checkout. Un
+# script shell devient alors inexecutable dans un conteneur Linux : le noyau lit
+# `#!/bin/sh\r` et cherche un interpreteur nomme « sh\r ». L'erreur affichee
+# ("no such file or directory") ne mentionne meme pas le vrai coupable.
+* text=auto eol=lf
+
+# Ces fichiers sont lus par un interpreteur ou un moteur qui exige du LF.
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.conf      text eol=lf
+*.yml       text eol=lf
+
+# Binaires : ne jamais toucher au contenu.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

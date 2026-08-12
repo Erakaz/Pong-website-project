@@ -1,0 +1,26 @@
+# Dependances volontairement minimales. Chacune doit pouvoir etre justifiee en
+# soutenance : aucune ne resout a elle seule une feature ou un module du sujet.
+#
+#   Django          framework backend impose par le module « Framework »
+#   channels        support WebSocket/ASGI (module Remote players + Live chat)
+#   channels-redis  channel layer partage entre les workers
+#   daphne          serveur ASGI qui sert HTTP et WebSocket dans un seul process
+#   psycopg         pilote PostgreSQL, impose par le module « Database »
+#   argon2-cffi     Argon2id, algorithme de hachage de mots de passe
+#   Pillow          re-encodage des avatars televerses (defense anti-polyglotte)
+#   redis           client direct pour la presence en ligne et le rate-limit
+#
+# Ne figurent PAS ici, volontairement :
+#   djangorestframework  -> tiers non officiel ; vues Django + validation maison
+#   PyJWT / pyotp        -> JWT et TOTP ecrits a la main (c'est l'objet du module)
+#   django-allauth       -> resoudrait a lui seul le module OAuth 42 (interdit)
+#   requests / httpx     -> urllib de la stdlib suffit pour l'echange OAuth
+
+Django~=5.1.0
+channels~=4.2.0
+channels-redis~=4.2.0
+daphne~=4.1.0
+psycopg[binary]~=3.2.0
+argon2-cffi~=23.1.0
+Pillow~=11.1.0
+redis~=5.2.0

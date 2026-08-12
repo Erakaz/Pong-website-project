@@ -1,0 +1,19 @@
+# Surcouche de DEVELOPPEMENT uniquement — ne pas utiliser pour l'evaluation.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Elle ajoute des bind-mounts pour recharger le code sans rebuild. Ces
+# bind-mounts sont INTERDITS sur les machines 42 (Docker rootless + UID non
+# root dans le conteneur), d'ou leur isolement dans ce fichier separe.
+
+services:
+  backend:
+    environment:
+      DJANGO_DEBUG: "1"
+    volumes:
+      - ./backend:/app
+
+  nginx:
+    volumes:
+      - ./frontend:/srv/frontend:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro

@@ -1,0 +1,101 @@
+name: ft_transcendence
+
+# Lancement complet en une seule commande :  docker compose up --build
+#
+# Uniquement des volumes NOMMES : sur les machines 42, Docker tourne en mode
+# rootless et les bind-mounts host <-> conteneur avec des UID non-root sont
+# interdits. Pour le confort de developpement local, utiliser en plus
+# docker-compose.dev.yml (voir README).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    networks: [backnet]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Pas de persistance : Redis ne porte que de l'etat volatil (channel layer
+    # de Channels, presence en ligne, compteurs de rate-limit).
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [backnet]
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - media:/app/media
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          try:
+              sys.exit(0 if urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=3).status == 200 else 1)
+          except Exception:
+              sys.exit(1)
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks: [backnet, frontnet]
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+      - "${HTTPS_PORT:-8443}:8443"
+    volumes:
+      - media:/srv/media:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [frontnet]
+
+volumes:
+  pgdata:
+  media:
+
+networks:
+  # PostgreSQL et Redis ne sont joignables que depuis backnet : nginx (et donc
+  # l'exterieur) n'a aucune route vers eux.
+  backnet:
+    internal: true
+  frontnet:

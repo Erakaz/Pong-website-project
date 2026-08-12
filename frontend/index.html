@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tournois de Pong en ligne — projet ft_transcendence, 42.">
+  <title>ft_transcendence</title>
+
+  <!-- Bootstrap est vendorise dans le depot : la CSP interdit toute source
+       externe, et les machines de l'ecole peuvent etre hors ligne. -->
+  <link rel="stylesheet" href="/vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+  <a class="visually-hidden-focusable skip-link" href="#app">Aller au contenu principal</a>
+
+  <nav class="navbar navbar-expand-md border-bottom border-secondary-subtle" id="navbar">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/" data-link>
+        <span class="brand-mark" aria-hidden="true"></span>
+        ft_transcendence
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+              data-bs-target="#nav-menu" aria-controls="nav-menu"
+              aria-expanded="false" aria-label="Afficher ou masquer la navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="nav-menu">
+        <ul class="navbar-nav me-auto" id="nav-links"></ul>
+        <div class="d-flex align-items-center gap-2" id="nav-session"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Cible du routeur : tout le contenu de page est remplace ici. -->
+  <main id="app" class="container flex-grow-1 py-4" tabindex="-1"></main>
+
+  <footer class="border-top border-secondary-subtle py-3 mt-auto">
+    <div class="container d-flex flex-wrap justify-content-between gap-2 small text-body-secondary">
+      <span>ft_transcendence — 42</span>
+      <a href="/privacy">Donnees et vie privee</a>
+      <span id="footer-status">Connexion au serveur…</span>
+    </div>
+  </footer>
+
+  <!-- Region ARIA live : les notifications y sont annoncees aux lecteurs
+       d'ecran sans voler le focus. -->
+  <div id="toasts" class="toast-container position-fixed bottom-0 end-0 p-3"
+       role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script type="module" src="/js/main.js"></script>
+  <script src="/vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
+</body>
+</html>
