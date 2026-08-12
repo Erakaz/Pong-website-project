@@ -1,11 +1,5 @@
 name: ft_transcendence
 
-# Lancement complet en une seule commande :  docker compose up --build
-#
-# Uniquement des volumes NOMMES : sur les machines 42, Docker tourne en mode
-# rootless et les bind-mounts host <-> conteneur avec des UID non-root sont
-# interdits. Pour le confort de developpement local, utiliser en plus
-# docker-compose.dev.yml (voir README).
 
 services:
   postgres:
@@ -29,8 +23,6 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    # Pas de persistance : Redis ne porte que de l'etat volatil (channel layer
-    # de Channels, presence en ligne, compteurs de rate-limit).
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -94,8 +86,6 @@ volumes:
   media:
 
 networks:
-  # PostgreSQL et Redis ne sont joignables que depuis backnet : nginx (et donc
-  # l'exterieur) n'a aucune route vers eux.
   backnet:
     internal: true
   frontnet:

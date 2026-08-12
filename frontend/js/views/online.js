@@ -1,9 +1,4 @@
-/**
- * Salon des parties et tournois en ligne (module « Remote players »).
- *
- * La liste se rafraichit toute seule : sans cela, deux joueurs pourraient
- * rester chacun sur leur ecran a s'attendre mutuellement.
- */
+
 
 import { get, post } from '../api.js';
 import { clear, el } from '../dom.js';
@@ -80,8 +75,7 @@ export default async function render(context) {
     ),
   );
 
-  // Sans ce nettoyage, l'intervalle continuerait d'interroger le serveur apres
-  // avoir quitte la page.
+
   return { node, cleanup: () => window.clearInterval(timer) };
 }
 

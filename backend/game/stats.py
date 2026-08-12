@@ -1,13 +1,4 @@
-"""Agregats statistiques sur les matchs.
-
-Regroupes ici plutot que dans les vues : le profil (module « User management »)
-et les tableaux de bord (module « Dashboards ») consomment les memes chiffres,
-et ils doivent rester coherents entre les deux pages.
-
-Seuls les matchs rattaches a un COMPTE sont comptabilises. Un match joue sous
-un simple alias n'appartient a personne : l'attribuer a quelqu'un permettrait
-de gonfler ses statistiques en saisissant le pseudo d'un tiers.
-"""
+"""Agregats statistiques sur les matchs."""
 
 from __future__ import annotations
 
@@ -52,7 +43,6 @@ def summary(user) -> dict:
         "played": played,
         "wins": wins,
         "losses": losses,
-        # Arrondi au dixieme de pourcent : afficher 66.66666 % n'apporte rien.
         "win_rate": round(wins / played * 100, 1) if played else 0.0,
         "points_for": points_for,
         "points_against": points_against,
@@ -64,10 +54,7 @@ def summary(user) -> dict:
 
 
 def _streak(matches: list[Match], user) -> dict:
-    """Serie en cours : nombre de victoires (ou defaites) consecutives.
-
-    `matches` est deja trie du plus recent au plus ancien.
-    """
+    """Serie en cours : nombre de victoires (ou defaites) consecutives."""
     streak = 0
     kind = None
     for match in matches:
@@ -106,12 +93,7 @@ def by_opponent(user, limit: int = 8) -> list[dict]:
 
 
 def recent_form(user, limit: int = 12) -> list[dict]:
-    """Les N derniers resultats, du plus ancien au plus recent.
-
-    Alimente la courbe d'evolution : afficher les points marques et encaisses
-    match apres match montre une progression que le seul ratio de victoires
-    masque.
-    """
+    """Les N derniers resultats, du plus ancien au plus recent."""
     entries = []
     for match in list(finished_matches(user)[:limit])[::-1]:
         side = match.side_of_user(user)
@@ -161,12 +143,7 @@ def match_detail(match: Match) -> dict:
 
 
 def history(user, limit: int = 20) -> list[dict]:
-    """Historique des rencontres, vu du cote de ce joueur.
-
-    Le sujet demande un historique « including 1v1 games, dates, and relevant
-    details » : chaque ligne porte l'adversaire, le score dans le bon sens, la
-    date et le tournoi eventuel.
-    """
+    """Historique des rencontres, vu du cote de ce joueur."""
     entries = []
     for match in finished_matches(user)[:limit]:
         side = match.side_of_user(user)

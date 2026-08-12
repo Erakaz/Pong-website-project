@@ -1,11 +1,4 @@
-/**
- * Page de diagnostic.
- *
- * Verifie les deux canaux dont depend tout le reste du projet : l'API en
- * HTTPS et la WebSocket en WSS. Elle sert de premiere etape a la checklist
- * d'evaluation, et illustre le contrat de nettoyage du routeur (la socket est
- * fermee des qu'on quitte la page).
- */
+
 
 import { api } from '../api.js';
 import { el } from '../dom.js';
@@ -38,7 +31,7 @@ export default function render() {
     holder.replaceChildren(node);
   };
 
-  // --- Test 1 : API HTTPS ---
+
   (async () => {
     const start = performance.now();
     try {
@@ -50,7 +43,7 @@ export default function render() {
     }
   })();
 
-  // --- Test 2 : WebSocket securisee ---
+
   try {
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
     socket = new WebSocket(`${scheme}://${window.location.host}/ws/ping`);
@@ -77,7 +70,7 @@ export default function render() {
       replace(wsValue, badge('fail', 'connexion impossible'));
     });
     socket.addEventListener('close', (event) => {
-      // 1000 = fermeture normale, y compris celle qu'on declenche nous-memes.
+
       if (!cancelled && event.code !== 1000) {
         replace(wsValue, badge('fail', `fermeture ${event.code}`));
       }
@@ -107,8 +100,8 @@ export default function render() {
 
   return {
     node,
-    // Contrat du routeur : quitter la page ferme la socket. Sans cela, chaque
-    // passage sur cette page laisserait une connexion ouverte cote serveur.
+
+
     cleanup() {
       cancelled = true;
       if (socket && socket.readyState <= WebSocket.OPEN) {

@@ -1,14 +1,4 @@
-/**
- * Tableau d'un tournoi.
- *
- * Repond a deux exigences explicites du sujet :
- *  - « it must clearly display who is playing against whom and the order of
- *    the players » : le tableau complet est affiche tour par tour, y compris
- *    les rencontres a venir ;
- *  - « the tournament system organize the matchmaking of the participants, and
- *    announce the next fight » : la prochaine rencontre est mise en avant en
- *    tete de page, avec le bouton pour la lancer.
- */
+
 
 import { get, post } from '../api.js';
 import { el } from '../dom.js';
@@ -63,7 +53,6 @@ export default async function render(context) {
   );
 }
 
-/* --- Inscriptions (tournoi a distance) ----------------------------------- */
 
 function registrationPanel(tournament, context) {
   const { user } = getState();
@@ -115,7 +104,6 @@ function action(label, variant, handler, disabled = false) {
   }, label);
 }
 
-/* --- Annonce de la prochaine rencontre ---------------------------------- */
 
 function nextMatch(tournament) {
   const match = tournament.next_match;
@@ -149,7 +137,6 @@ function champion(tournament) {
   );
 }
 
-/* --- Tableau ------------------------------------------------------------- */
 
 function bracketColumn(tournament) {
   return card('Tableau',
@@ -190,7 +177,6 @@ function matchRow(match) {
   }, body, action);
 }
 
-/* --- Participants -------------------------------------------------------- */
 
 function playersColumn(tournament) {
   if (tournament.players.length === 0) {

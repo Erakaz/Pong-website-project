@@ -1,24 +1,13 @@
-/**
- * Client WebSocket d'une partie.
- *
- * Reconnexion automatique avec attente exponentielle : une coupure reseau de
- * quelques secondes ne doit pas faire perdre la partie, le serveur laisse une
- * fenetre de grace avant de declarer forfait. L'attente croit pour ne pas
- * marteler un serveur qui redemarre, et est bornee pour rester reactive.
- */
+
 
 import { getState } from '../store.js';
 
-const RETRY_BASE = 500;      // ms
+const RETRY_BASE = 500;
 const RETRY_MAX = 8000;
 const CLOSE_NORMAL = 1000;
 
 export class MatchSocket {
-  /**
-   * @param {string} matchId
-   * @param {object} handlers  onJoined, onState, onEvents, onOpponent, onEnd,
-   *                           onAborted, onError, onStatus
-   */
+
   constructor(matchId, handlers = {}) {
     this.matchId = matchId;
     this.handlers = handlers;
@@ -48,8 +37,8 @@ export class MatchSocket {
     socket.addEventListener('open', () => {
       this.attempts = 0;
       this.notifyStatus('online');
-      // Le jeton voyage dans le premier message applicatif, pas dans l'URL :
-      // une query string finirait dans les journaux du reverse proxy.
+
+
       this.send({ type: 'join', token: getState().accessToken });
     });
 
@@ -73,8 +62,7 @@ export class MatchSocket {
       this.scheduleRetry();
     });
 
-    // L'evenement `error` est toujours suivi de `close` : inutile de
-    // reconnecter deux fois, on se contente de ne pas laisser fuiter l'erreur.
+
     socket.addEventListener('error', () => {});
   }
 

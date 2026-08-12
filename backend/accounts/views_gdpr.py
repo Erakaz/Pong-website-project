@@ -1,8 +1,4 @@
-"""Routes RGPD.
-
-Les deux gestes irreversibles exigent de saisir a nouveau son mot de passe :
-un onglet laisse ouvert ne doit pas suffire a effacer un compte.
-"""
+"""Routes RGPD."""
 
 from __future__ import annotations
 
@@ -26,9 +22,6 @@ def _confirm_identity(request) -> None:
                            {"field": "password"})
         return
 
-    # Compte cree via 42 : pas de mot de passe a verifier. On demande de
-    # recopier son pseudo, comme le font la plupart des services pour une
-    # action destructrice.
     confirmation = data.get("confirm")
     if confirmation != user.display_name:
         raise ApiError("confirmation_mismatch",
@@ -55,7 +48,6 @@ def export_data(request):
 def anonymize(request):
     _confirm_identity(request)
     gdpr.anonymize(request.user)
-    # Le compte devient inutilisable : on nettoie aussi les cookies de session.
     return tokens.clear_session(json_ok({"ok": True, "anonymized": True}))
 
 
@@ -69,12 +61,7 @@ def delete_account(request):
 
 @require_methods("GET")
 def privacy_summary(request):
-    """Resume machine-lisible de ce que le site conserve et pourquoi.
-
-    Le sujet demande « clear and transparent communication with users regarding
-    their data privacy rights ». Le texte affiche vient d'ici, pour rester au
-    meme endroit que le code qui met ces regles en oeuvre.
-    """
+    """Resume machine-lisible de ce que le site conserve et pourquoi."""
     return json_ok({
         "collected": [
             {"name": "Adresse e-mail",

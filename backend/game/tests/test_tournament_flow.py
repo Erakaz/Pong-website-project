@@ -1,8 +1,4 @@
-"""Tests du deroulement d'un tournoi, de la creation au sacre du vainqueur.
-
-Ces tests-la touchent la base de donnees : ils utilisent `django.test.TestCase`
-et sa transaction annulee apres chaque cas.
-"""
+"""Tests du deroulement d'un tournoi, de la creation au sacre du vainqueur."""
 
 from django.test import TestCase
 
@@ -40,8 +36,6 @@ class TournamentCreationTest(TestCase):
             name="Coupe", mode=Tournament.MODE_LOCAL, points_to_win=3,
             entries=aliases("Ada", "Bob", "Cyd", "Dov"),
         )
-        # Deux demi-finales jouables + une finale encore indeterminee : le
-        # tableau complet est affichable des l'ouverture.
         self.assertEqual(tournament.matches.filter(round_index=0).count(), 2)
         self.assertEqual(tournament.matches.filter(round_index=1).count(), 1)
         self.assertEqual(
@@ -54,8 +48,6 @@ class TournamentCreationTest(TestCase):
             name="Coupe", mode=Tournament.MODE_LOCAL, points_to_win=3,
             entries=aliases("Ada", "Bob", "Cyd", "Dov", "Eve"),
         )
-        # Tableau de 8 pour 5 joueurs : trois exemptions, donc un seul match
-        # au premier tour.
         self.assertEqual(tournament.matches.filter(round_index=0).count(), 1)
 
         quarter = tournament.matches.get(round_index=0)
@@ -103,7 +95,6 @@ class ProgressionTest(TestCase):
 
         final = self.final()
         self.assertEqual(final.alias_of(0), expected)
-        # La finale reste en attente tant que le second demi-finaliste manque.
         self.assertEqual(final.state, Match.STATE_PENDING)
 
     def test_loser_is_marked_eliminated(self):
@@ -148,7 +139,7 @@ class ProgressionTest(TestCase):
     def test_recording_the_same_result_twice_is_harmless(self):
         semi = self.semis()[0]
         finish(semi, winner_side=0)
-        finish(semi, winner_side=1)      # rejeu (double arret de la boucle)
+        finish(semi, winner_side=1)
 
         semi.refresh_from_db()
         self.assertEqual(semi.winner_side, 0)

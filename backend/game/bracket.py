@@ -1,18 +1,4 @@
-"""Generation et progression du tableau de tournoi (elimination directe).
-
-Fonctions pures, sans Django : elles ne manipulent que des entiers et des
-listes, et se testent donc sans base de donnees.
-
-Le sujet impose que « le systeme de tournoi organise le matchmaking des
-participants et annonce le prochain combat ». Ici, le matchmaking est un
-tableau a elimination directe avec tetes de serie : le premier inscrit
-rencontre le dernier, le deuxieme l'avant-dernier, etc. Ce placement classique
-evite que les deux premiers inscrits se croisent des le premier tour.
-
-Quand le nombre d'inscrits n'est pas une puissance de deux, le tableau est
-complete par des exemptions (byes) attribuees aux mieux places : elles passent
-automatiquement au tour suivant, sans match fictif a jouer.
-"""
+"""Generation et progression du tableau de tournoi (elimination directe)."""
 
 from __future__ import annotations
 
@@ -35,13 +21,7 @@ def rounds_count(player_count: int) -> int:
 
 
 def seed_order(size: int) -> list[int]:
-    """Ordre des tetes de serie dans le tableau.
-
-    Pour 8 : [0, 7, 3, 4, 1, 6, 2, 5] — soit les rencontres 1-8, 4-5, 2-7, 3-6.
-    Construction par doublements successifs : a chaque etape, chaque position
-    `i` se dedouble en `(i, n - 1 - i)`, ce qui maintient l'ecart maximal entre
-    tetes de serie a chaque tour.
-    """
+    """Ordre des tetes de serie dans le tableau."""
     order = [0]
     while len(order) < size:
         total = len(order) * 2
@@ -50,10 +30,7 @@ def seed_order(size: int) -> list[int]:
 
 
 def first_round_pairings(player_count: int) -> list[tuple[int, int | None]]:
-    """Rencontres du premier tour, en indices de tete de serie.
-
-    `None` signale une exemption : le joueur passe directement au tour suivant.
-    """
+    """Rencontres du premier tour, en indices de tete de serie."""
     size = bracket_size(player_count)
     slots = [index if index < player_count else None for index in seed_order(size)]
     return [(slots[i], slots[i + 1]) for i in range(0, size, 2)]

@@ -1,11 +1,4 @@
-/**
- * Tableau de bord d'une partie.
- *
- * Le module « Dashboards » demande explicitement « a separate dashboard for
- * game sessions, showing detailed statistics, outcomes, and historical data
- * for each match ». Le deroule du score point par point vient du journal
- * enregistre par la boucle de jeu.
- */
+
 
 import { get } from '../api.js';
 import { COLORS, legend, scoreTimeline } from '../charts.js';

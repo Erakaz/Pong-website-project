@@ -1,9 +1,4 @@
-"""Regles metier de la messagerie.
-
-Regroupees ici parce qu'elles sont appelees depuis deux endroits : les vues
-HTTP (historique, blocages) et le socket de session (envoi temps reel). Le
-controle de blocage en particulier ne doit exister qu'a un seul endroit.
-"""
+"""Regles metier de la messagerie."""
 
 from __future__ import annotations
 
@@ -18,12 +13,7 @@ MESSAGE_MAX_LENGTH = 1000
 
 
 def is_blocked(sender: User, recipient: User) -> bool:
-    """Vrai si l'un des deux a bloque l'autre.
-
-    Le blocage coupe la conversation dans les DEUX sens : laisser la personne
-    bloquee continuer a recevoir les messages de celle qui l'a bloquee serait
-    incoherent, et permettrait de deviner qu'on a ete bloque.
-    """
+    """Vrai si l'un des deux a bloque l'autre."""
     return Block.objects.filter(
         Q(blocker=sender, blocked=recipient) | Q(blocker=recipient, blocked=sender),
     ).exists()
@@ -36,8 +26,6 @@ def send_message(sender: User, recipient: User, body: str, *,
     if not recipient.is_active or recipient.is_anonymized:
         raise ApiError("not_found", "Ce joueur n'est plus joignable.", 404)
     if is_blocked(sender, recipient):
-        # Message volontairement neutre : reveler « tu es bloque » donnerait a
-        # un harceleur l'information qu'il cherche.
         raise ApiError("not_delivered", "Ce message n'a pas pu etre delivre.", 403)
 
     text = clean_text(body)
@@ -61,9 +49,6 @@ def notify(recipient: User, body: str, *, match=None) -> Message:
 
 def conversation(user: User, other: User, *, limit: int = 50) -> list[Message]:
     """Fil entre deux personnes, du plus ancien au plus recent."""
-    # `id` departage deux messages du meme instant : sans lui, l'ordre de deux
-    # messages ecrits dans la meme microseconde serait laisse au hasard du
-    # moteur de base de donnees.
     queryset = (Message.objects
                 .filter(Q(sender=user, recipient=other) | Q(sender=other, recipient=user))
                 .order_by("-created_at", "-id")[:limit])
@@ -71,11 +56,7 @@ def conversation(user: User, other: User, *, limit: int = 50) -> list[Message]:
 
 
 def conversations(user: User) -> list[dict]:
-    """Liste des fils, tries par activite la plus recente.
-
-    Les personnes bloquees en sont exclues : leur conversation ne doit plus
-    apparaitre du tout.
-    """
+    """Liste des fils, tries par activite la plus recente."""
     blocked_ids = set(Block.objects.filter(Q(blocker=user) | Q(blocked=user))
                       .values_list("blocker_id", "blocked_id"))
     excluded = {pk for pair in blocked_ids for pk in pair} - {user.pk}
@@ -91,7 +72,7 @@ def conversations(user: User) -> list[dict]:
     for row in messages:
         other_id = row["recipient_id"] if row["sender_id"] == user.pk else row["sender_id"]
         if other_id is None or other_id == user.pk:
-            continue                      # message systeme, sans interlocuteur
+            continue
         current = latest.get(other_id)
         if current is None or row["last"] > current:
             latest[other_id] = row["last"]

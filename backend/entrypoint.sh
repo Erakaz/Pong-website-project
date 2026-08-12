@@ -1,7 +1,4 @@
 #!/bin/sh
-# Demarrage du backend : on attend PostgreSQL, on applique les migrations,
-# puis on cede le PID 1 a Daphne (`exec`) pour que les signaux d'arret de
-# Docker soient recus par le serveur et non par ce script.
 set -eu
 
 echo "[backend] attente de PostgreSQL sur ${POSTGRES_HOST}:${POSTGRES_PORT}..."

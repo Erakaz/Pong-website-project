@@ -1,17 +1,4 @@
-"""Validation des entrees utilisateur, cote serveur.
-
-Le sujet impose une validation serveur de tous les formulaires et de toutes les
-entrees. Chaque champ passe donc par une de ces fonctions, qui leve une
-`ApiError` decrivant precisement le champ fautif.
-
-Deux precautions systematiques :
-
-* normalisation Unicode NFKC, pour qu'un pseudo ne puisse pas se faire passer
-  pour un autre via des caracteres visuellement identiques mais encodes
-  differemment ;
-* suppression des caracteres de controle et des marques de direction, qui
-  permettent des affichages trompeurs (texte inverse par RLO, par exemple).
-"""
+"""Validation des entrees utilisateur, cote serveur."""
 
 from __future__ import annotations
 
@@ -24,17 +11,13 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 
 from core.http import ApiError
 
-# Plages de codepoints jamais legitimes dans un champ de formulaire. Elles sont
-# ecrites en valeurs numeriques plutot qu'en litteraux : ces caracteres sont
-# invisibles, les laisser tels quels dans le source le rendrait illisible et
-# fragile au moindre copier-coller.
 _FORBIDDEN_RANGES = (
-    (0x0000, 0x001F),  # controles C0
-    (0x007F, 0x009F),  # DEL et controles C1
-    (0x200B, 0x200F),  # espaces de largeur nulle, marques LTR/RTL
-    (0x202A, 0x202E),  # surcharges de direction bidirectionnelle
-    (0x2066, 0x2069),  # isolats de direction
-    (0xFEFF, 0xFEFF),  # BOM / espace insecable de largeur nulle
+    (0x0000, 0x001F),
+    (0x007F, 0x009F),
+    (0x200B, 0x200F),
+    (0x202A, 0x202E),
+    (0x2066, 0x2069),
+    (0xFEFF, 0xFEFF),
 )
 
 
@@ -43,15 +26,10 @@ def _is_forbidden(char: str) -> bool:
     return any(low <= code <= high for low, high in _FORBIDDEN_RANGES)
 
 
-# Un pseudo lisible : lettres, chiffres, tiret, souligne, point, espaces
-# simples. Ni espace en tete ou en fin, ni ponctuation isolee aux extremites.
 _DISPLAY_NAME_RE = re.compile(r"^[^\W_][\w.\- ]{1,22}[^\W_]$", re.UNICODE)
 
-# Un alias de tournoi, plus permissif car plus court.
 _ALIAS_RE = re.compile(r"^[\w.\- ]+$", re.UNICODE)
 
-# La RFC 5322 dans son integralite est inapplicable en pratique ; cette forme
-# couvre les adresses reelles et rejette les tentatives d'injection.
 _EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[A-Za-z0-9.\-]{1,190}\.[A-Za-z]{2,24}$")
 
 DISPLAY_NAME_MIN = 3
@@ -59,7 +37,7 @@ DISPLAY_NAME_MAX = 24
 ALIAS_MIN = 1
 ALIAS_MAX = 16
 EMAIL_MAX = 254
-PASSWORD_MAX = 128  # Borne haute : evite un deni de service par hachage Argon2.
+PASSWORD_MAX = 128
 
 
 def clean_text(value: str) -> str:
@@ -122,7 +100,6 @@ def field_int(
             raise ApiError("missing_field", f"Le champ « {name} » est obligatoire.", 400,
                            {"field": name})
         return default
-    # `bool` derive de `int` : sans ce test, True passerait pour 1.
     if isinstance(raw, bool) or not isinstance(raw, int):
         try:
             raw = int(str(raw).strip())
@@ -207,11 +184,7 @@ def validate_alias(raw: str) -> str:
 
 
 def validate_password(raw: str, user: Any = None) -> str:
-    """Delegue aux validateurs Django configures (longueur, trivialite, ...).
-
-    Argon2 accepte n'importe quelle longueur ; borner a 128 caracteres evite
-    qu'un corps de 64 Kio ne monopolise un worker pendant le hachage.
-    """
+    """Delegue aux validateurs Django configures (longueur, trivialite, ...)."""
     if not isinstance(raw, str) or not raw:
         raise ApiError("missing_field", "Le mot de passe est obligatoire.", 400,
                        {"field": "password"})

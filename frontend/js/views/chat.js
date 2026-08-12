@@ -1,13 +1,4 @@
-/**
- * Messagerie directe.
- *
- * Couvre les cinq exigences du module « Live chat » :
- *  - messages directs, en temps reel via le socket de session ;
- *  - blocage d'un joueur, applique par le serveur ;
- *  - invitation a une partie depuis la conversation ;
- *  - reception des annonces du systeme de tournoi (messages de type `system`) ;
- *  - acces au profil d'un joueur depuis la conversation.
- */
+
 
 import { get, post } from '../api.js';
 import { clear, el } from '../dom.js';
@@ -62,14 +53,13 @@ export default async function render(context) {
 
   threadColumn.appendChild(thread.node);
 
-  // Une conversation qui n'existait pas encore doit apparaitre dans la liste
-  // des l'arrivee du premier message.
+
   const unsubscribe = on('chat', async () => {
     try {
       index = await get('/api/chat/conversations');
       paintList();
     } catch {
-      // liste non rafraichie : sans consequence, le fil reste a jour
+
     }
   });
 
@@ -90,7 +80,6 @@ export default async function render(context) {
   };
 }
 
-/* --- Fil de conversation -------------------------------------------------- */
 
 async function buildThread(otherId, me, context) {
   let data;
@@ -107,7 +96,7 @@ async function buildThread(otherId, me, context) {
   });
 
   const append = (message) => {
-    // Le fil n'affiche que les messages de cette conversation.
+
     const involved = [message.sender_id, message.recipient_id];
     if (!involved.includes(otherId) && message.kind !== 'system') return;
     messages.appendChild(bubble(message, me, other));
@@ -168,7 +157,7 @@ async function buildThread(otherId, me, context) {
     class: 'card-header d-flex align-items-center gap-2 flex-wrap',
   },
     avatar(other, 32),
-    // Acces au profil depuis la conversation, exige par le sujet.
+
     el('a', { class: 'flex-grow-1 text-truncate', href: `/users/${other.id}` },
       other.display_name),
     el('button', {

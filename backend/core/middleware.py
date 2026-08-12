@@ -14,14 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class RateLimitMiddleware:
-    """Applique un quota par IP sur les routes d'authentification.
+    """Applique un quota par IP sur les routes d'authentification."""
 
-    Le quota porte sur les routes ou une tentative a un cout pour autrui :
-    connexion, inscription, verification 2FA, rafraichissement. Le reste de
-    l'API est deja protege par l'authentification.
-    """
-
-    # Prefixe d'URL -> nom du seau declare dans settings.RATE_LIMITS.
     BUCKETS = (
         ("/api/auth/login", "login"),
         ("/api/auth/register", "register"),
@@ -50,13 +44,7 @@ class RateLimitMiddleware:
 
 
 class JsonErrorMiddleware:
-    """Convertit toute exception non geree en reponse JSON.
-
-    Sans lui, Django repondrait une page HTML d'erreur. La SPA parse chaque
-    reponse de l'API en JSON : une page HTML declencherait une exception de
-    parsing dans la console du navigateur, or le sujet exige qu'aucune erreur
-    n'apparaisse en console.
-    """
+    """Convertit toute exception non geree en reponse JSON."""
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -74,8 +62,5 @@ class JsonErrorMiddleware:
         if isinstance(exception, SuspiciousOperation):
             return json_error("bad_request", "Requete invalide.", 400)
 
-        # Toute autre exception est un bug : elle est journalisee cote serveur
-        # avec sa trace, mais le client ne recoit qu'un message generique — un
-        # detail d'implementation renseignerait un attaquant.
         logger.exception("Exception non geree sur %s %s", request.method, request.path)
         return json_error("internal_error", "Erreur interne du serveur.", 500)

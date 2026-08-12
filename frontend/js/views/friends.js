@@ -1,9 +1,4 @@
-/**
- * Amis : liste, demandes recues et envoyees, recherche de joueurs.
- *
- * Le statut en ligne se met a jour en direct grace au socket de session : pas
- * de rechargement de page ni d'interrogation periodique du serveur.
- */
+
 
 import { del, get, post } from '../api.js';
 import { clear, el } from '../dom.js';
@@ -79,8 +74,7 @@ export default async function render() {
 
   paint();
 
-  // Une notification de presence ne change que les pastilles : on repeint la
-  // liste plutot que de manipuler chaque pastille individuellement.
+
   const unsubscribe = on('presence', paint);
 
   const node = el('div', {},
@@ -100,9 +94,8 @@ export default async function render() {
 
 function friendRow(entry, actions) {
   const user = entry.user;
-  // Source unique : le registre alimente par le socket de session. S'appuyer
-  // en plus sur `user.online` fige la valeur du dernier chargement, et une
-  // deconnexion ne serait jamais affichee.
+
+
   const online = isOnline(user.id);
 
   return el('div', {
@@ -143,7 +136,6 @@ function actionButton(label, variant, action) {
   }, label);
 }
 
-/* --- Recherche ----------------------------------------------------------- */
 
 function searchCard(refresh) {
   const results = el('div', { class: 'd-grid gap-2 mt-3' });
@@ -187,8 +179,7 @@ function searchCard(refresh) {
     }
   };
 
-  // Anti-rebond : on attend 250 ms de silence avant d'interroger le serveur,
-  // sinon chaque frappe declencherait une requete.
+
   input.addEventListener('input', () => {
     window.clearTimeout(timer);
     timer = window.setTimeout(search, 250);

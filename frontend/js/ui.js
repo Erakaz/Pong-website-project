@@ -1,11 +1,8 @@
-/**
- * Petits composants d'interface reutilises par toutes les vues.
- * Construits avec les helpers de dom.js : aucun innerHTML.
- */
+
 
 import { el, frag } from './dom.js';
 
-/** En-tete de page : titre + sous-titre optionnel + actions a droite. */
+
 export function pageHeader(title, { subtitle = null, actions = null } = {}) {
   return el('div', { class: 'd-flex flex-wrap justify-content-between align-items-start gap-3 mb-4' },
     el('div', {},
@@ -36,16 +33,12 @@ export function alert(message, variant = 'danger') {
   return el('div', { class: `alert alert-${variant}`, role: 'alert' }, message);
 }
 
-/** Bloc d'erreur de formulaire, lie au champ par aria-describedby. */
+
 export function fieldError(id, message) {
   return el('div', { id, class: 'invalid-feedback d-block' }, message);
 }
 
-/**
- * Notification ephemere. Le conteneur porte aria-live="polite" (voir
- * index.html) : le message est annonce aux lecteurs d'ecran sans voler le
- * focus de l'utilisateur.
- */
+
 export function toast(message, variant = 'primary', { timeout = 5000 } = {}) {
   const container = document.getElementById('toasts');
   if (!container) return;
@@ -70,7 +63,7 @@ export function toast(message, variant = 'primary', { timeout = 5000 } = {}) {
   return node;
 }
 
-/** Champ de formulaire complet : label + input + zone d'erreur. */
+
 export function field(name, label, { type = 'text', value = '', autocomplete = null,
   required = true, help = null, ...rest } = {}) {
   const inputId = `field-${name}`;
@@ -110,10 +103,7 @@ export function field(name, label, { type = 'text', value = '', autocomplete = n
   return wrapper;
 }
 
-/**
- * Applique une ApiError a un formulaire : le message se pose sur le champ
- * fautif quand le serveur l'a designe, sinon en banniere generale.
- */
+
 export function applyFormError(error, fields, banner) {
   for (const wrapper of Object.values(fields)) wrapper.clearError();
 

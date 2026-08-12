@@ -1,14 +1,4 @@
-"""API REST du jeu.
-
-Le module « Server-Side Pong » demande une API qui expose les ressources du
-jeu et permette d'y jouer partiellement en ligne de commande. D'ou les routes
-`/state` et `/input` : avec elles, une partie se pilote entierement au curl,
-sans navigateur.
-
-    curl -k https://localhost:8443/api/games/<id>/state
-    curl -k -X POST https://localhost:8443/api/games/<id>/input \
-         -H 'Content-Type: application/json' -d '{"side":0,"dir":-1}'
-"""
+"""API REST du jeu."""
 
 from __future__ import annotations
 
@@ -21,9 +11,6 @@ from game import bracket, engine, rooms, services, stats
 from game.models import Match, Tournament
 
 
-# ---------------------------------------------------------------------------
-#  Matchs
-# ---------------------------------------------------------------------------
 
 @require_methods("GET", "POST")
 def matches(request):
@@ -45,8 +32,6 @@ def _list_matches(request):
     if request.GET.get("mode") in dict(Match.MODE_CHOICES):
         queryset = queryset.filter(mode=request.GET["mode"])
 
-    # Les parties locales n'ont aucun interet pour autrui : elles ne sont
-    # jamais listees publiquement.
     queryset = queryset.exclude(mode=Match.MODE_LOCAL)
 
     items, meta = paginate(queryset, request)
@@ -66,16 +51,12 @@ def _create_match(request):
                               maximum=engine.MAX_POINTS_TO_WIN)
 
     if mode == Match.MODE_REMOTE:
-        # Une partie a distance suppose deux comptes identifies : sans cela,
-        # impossible d'attribuer un historique ni de reconnecter un joueur.
         if not request.user.is_authenticated:
             raise ApiError("unauthorized",
                            "Il faut etre connecte pour ouvrir une partie a distance.", 401)
         match = services.create_remote_match(user=request.user, points_to_win=points_to_win)
         return json_ok({"match": match.to_dict(viewer=request.user)}, status=201)
 
-    # Partie locale : deux alias sur le meme clavier. C'est le mode de la
-    # partie obligatoire du sujet, jouable sans aucun compte.
     default_left = request.user.display_name if request.user.is_authenticated else "Joueur 1"
     alias1 = validate_alias(field_str(data, "alias1", required=False, default=default_left,
                                       max_len=24))
@@ -117,13 +98,7 @@ def match_state(request, match_id):
 
 @require_methods("POST")
 def match_input(request, match_id):
-    """Commande de raquette envoyee en HTTP (equivalent du message WebSocket).
-
-    Ecrire dans le moteur depuis le pool de threads HTTP pendant que la boucle
-    asyncio le lit ne demande pas de verrou : `set_input` n'effectue qu'une
-    seule affectation d'entier, indivisible sous le GIL. Le tick suivant lira
-    soit l'ancienne valeur, soit la nouvelle, jamais un etat intermediaire.
-    """
+    """Commande de raquette envoyee en HTTP (equivalent du message WebSocket)."""
     data = read_json(request)
     side = field_int(data, "side", minimum=engine.LEFT, maximum=engine.RIGHT)
     direction = field_int(data, "dir", minimum=-1, maximum=1)
@@ -148,9 +123,6 @@ def match_join(request, match_id):
     return json_ok({"match": match.to_dict(viewer=request.user)})
 
 
-# ---------------------------------------------------------------------------
-#  Tableaux de bord (module « User and Game Stats Dashboards »)
-# ---------------------------------------------------------------------------
 
 @require_methods("GET")
 @login_required
@@ -180,9 +152,6 @@ def match_dashboard(request, match_id):
     return json_ok(stats.match_detail(_get_match(match_id)))
 
 
-# ---------------------------------------------------------------------------
-#  Tournois
-# ---------------------------------------------------------------------------
 
 @require_methods("GET", "POST")
 def tournaments(request):
@@ -229,12 +198,7 @@ def _create_tournament(request):
 
 
 def _parse_aliases(data: dict) -> list[dict]:
-    """Alias saisis a l'ouverture d'un tournoi local.
-
-    Le sujet demande explicitement cette saisie au demarrage, et que les alias
-    soient repartis de zero au tournoi suivant : ils appartiennent au tournoi,
-    donc ils disparaissent avec lui.
-    """
+    """Alias saisis a l'ouverture d'un tournoi local."""
     raw = data.get("aliases")
     if not isinstance(raw, list):
         raise ApiError("missing_field", "La liste « aliases » est obligatoire.", 400,
@@ -285,9 +249,6 @@ def tournament_start(request, tournament_id):
     return json_ok({"tournament": tournament.to_dict(viewer=request.user)})
 
 
-# ---------------------------------------------------------------------------
-#  Aides
-# ---------------------------------------------------------------------------
 
 def _get_match(match_id) -> Match:
     match = (Match.objects

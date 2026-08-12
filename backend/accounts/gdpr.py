@@ -1,22 +1,4 @@
-"""Droits RGPD : acces, portabilite, anonymisation, effacement.
-
-Le module « GDPR Compliance Options » demande quatre choses : consulter et
-exporter ses donnees, les modifier, demander leur anonymisation, et supprimer
-definitivement son compte. Les trois dernieres sont ici ; la modification passe
-par les routes de profil habituelles.
-
-Distinction importante entre les deux gestes destructeurs :
-
-* **anonymiser** conserve la ligne du compte mais efface tout ce qui identifie
-  la personne. Les matchs joues restent dans l'historique de ses adversaires,
-  sous un nom neutre : leurs statistiques ne sont pas faussees par une
-  disparition, et plus rien ne remonte a la personne ;
-* **supprimer** efface la ligne. Il faut alors nettoyer AUSSI les traces
-  laissees ailleurs — les alias figes sur les matchs, le contenu des messages
-  envoyes — sinon un nom resterait lisible dans la base apres l'effacement.
-
-Les deux operations sont irreversibles et se font dans une seule transaction.
-"""
+"""Droits RGPD : acces, portabilite, anonymisation, effacement."""
 
 from __future__ import annotations
 
@@ -33,11 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def export(user: User) -> dict:
-    """Toutes les donnees detenues sur cette personne, en JSON.
-
-    C'est le droit d'acces et de portabilite : un format structure, lisible par
-    un humain comme par un programme.
-    """
+    """Toutes les donnees detenues sur cette personne, en JSON."""
     from game import stats
 
     matches = Match.objects.filter(player1=user) | Match.objects.filter(player2=user)
@@ -54,9 +32,6 @@ def export(user: User) -> dict:
             "two_factor_enabled": user.totp_enabled,
             "oauth42_login": user.oauth42_login or None,
             "avatar": user.avatar.name if user.avatar else None,
-            # Ni le mot de passe, ni son empreinte, ni le secret TOTP : les
-            # exporter creerait un fichier dont la fuite compromettrait le
-            # compte.
         },
         "statistics": stats.summary(user),
         "matches": [
@@ -109,23 +84,17 @@ def _anonymous_label(user: User) -> str:
 
 def _scrub_traces(user: User, label: str) -> None:
     """Efface les donnees personnelles disseminees hors de la ligne du compte."""
-    # Alias figes sur les matchs : ce sont des noms lisibles, donc des donnees
-    # personnelles, meme si la cle etrangere disparait.
     Match.objects.filter(player1=user).update(player1_alias=label)
     Match.objects.filter(player2=user).update(player2_alias=label)
     TournamentPlayer.objects.filter(user=user).update(alias=label)
 
-    # Contenu des messages envoyes. Les lignes sont conservees pour ne pas
-    # trouer les conversations des autres, mais elles ne disent plus rien.
     Message.objects.filter(sender=user).update(body="")
 
-    # Relations : elles ne concernent plus personne.
     Friendship.objects.filter(from_user=user).delete()
     Friendship.objects.filter(to_user=user).delete()
     Block.objects.filter(blocker=user).delete()
     Block.objects.filter(blocked=user).delete()
 
-    # Sessions et facteurs d'authentification.
     RefreshToken.objects.filter(user=user).delete()
     BackupCode.objects.filter(user=user).delete()
 
@@ -146,7 +115,7 @@ def anonymize(user: User) -> User:
     _scrub_traces(user, label)
 
     user.display_name = label
-    user.email = None                 # unique mais nullable : plusieurs NULL possibles
+    user.email = None
     user.avatar = None
     user.oauth42_id = None
     user.oauth42_login = ""
@@ -156,10 +125,8 @@ def anonymize(user: User) -> User:
     user.last_seen = None
     user.is_anonymized = True
     user.anonymized_at = timezone.now()
-    # Sans e-mail, la connexion est impossible : le compte devient inerte.
     user.is_active = False
     user.set_unusable_password()
-    # Invalide immediatement tout jeton encore en circulation.
     user.token_version += 1
     user.save()
 

@@ -1,13 +1,4 @@
 #!/bin/sh
-# Genere un certificat TLS auto-signe au demarrage du conteneur.
-#
-# Pourquoi au demarrage plutot qu'au build : une cle privee ne doit pas etre
-# figee dans une couche d'image (elle serait partagee par toute personne
-# recuperant l'image). Ici la cle nait et meurt avec le conteneur.
-#
-# Le certificat est auto-signe : le navigateur affichera un avertissement au
-# premier acces, c'est attendu. Le sujet impose HTTPS, pas une autorite de
-# certification reconnue.
 
 set -eu
 

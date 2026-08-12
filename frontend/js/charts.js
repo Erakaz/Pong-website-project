@@ -1,16 +1,4 @@
-/**
- * Graphiques SVG minimalistes, ecrits a la main.
- *
- * Aucune bibliotheque de visualisation : trois formes suffisent aux tableaux
- * de bord demandes, et les dessiner soi-meme evite d'embarquer 200 Ko de
- * dependance pour tracer quelques rectangles. Le SVG s'adapte tout seul a la
- * largeur disponible grace au `viewBox`.
- *
- * Accessibilite : chaque graphique porte `role="img"` et une description
- * textuelle, et les memes chiffres sont toujours disponibles en toutes lettres
- * a cote — un graphique ne doit jamais etre le seul moyen d'acceder a une
- * information.
- */
+
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -47,11 +35,7 @@ function label(x, y, text, { anchor = 'middle', size = 11, fill = COLORS.text } 
   return node;
 }
 
-/**
- * Anneau victoires / defaites.
- * @param {number} wins
- * @param {number} losses
- */
+
 export function donut(wins, losses) {
   const total = wins + losses;
   const size = 160;
@@ -70,13 +54,13 @@ export function donut(wins, losses) {
   if (total > 0 && wins > 0) {
     const circumference = 2 * Math.PI * radius;
     const filled = (wins / total) * circumference;
-    // Un arc dessine avec `stroke-dasharray` : un seul cercle suffit, pas
-    // besoin de calculer un chemin.
+
+
     const arc = shape('circle', {
       cx: centre, cy: centre, r: radius, fill: 'none',
       stroke: COLORS.win, 'stroke-width': thickness,
       'stroke-dasharray': `${filled} ${circumference - filled}`,
-      'stroke-dashoffset': circumference / 4,     // demarre en haut
+      'stroke-dashoffset': circumference / 4,
       transform: `rotate(-90 ${centre} ${centre})`,
     });
     node.appendChild(arc);
@@ -89,10 +73,7 @@ export function donut(wins, losses) {
   return node;
 }
 
-/**
- * Barres horizontales : bilan par adversaire.
- * @param {{opponent: string, wins: number, losses: number}[]} rows
- */
+
 export function opponentBars(rows) {
   if (rows.length === 0) return null;
 
@@ -129,10 +110,7 @@ export function opponentBars(rows) {
   return node;
 }
 
-/**
- * Courbe des points marques et encaisses sur les derniers matchs.
- * @param {{for: number, against: number, opponent: string}[]} entries
- */
+
 export function formLines(entries) {
   if (entries.length < 2) return null;
 
@@ -149,7 +127,7 @@ export function formLines(entries) {
   const y = (value) => height - padding.bottom
     - (value / maximum) * (height - padding.top - padding.bottom);
 
-  // Lignes de reperage horizontales.
+
   for (let step = 0; step <= maximum; step += Math.max(1, Math.ceil(maximum / 4))) {
     node.appendChild(shape('line', {
       x1: padding.left, x2: width - padding.right, y1: y(step), y2: y(step),
@@ -178,10 +156,7 @@ export function formLines(entries) {
   return node;
 }
 
-/**
- * Deroule du score d'une partie, point par point.
- * @param {{t: number, scores: number[]}[]} timeline
- */
+
 export function scoreTimeline(timeline, names) {
   if (timeline.length === 0) return null;
 
@@ -208,8 +183,7 @@ export function scoreTimeline(timeline, names) {
     node.appendChild(label(padding.left - 6, y(step) + 4, String(step), { anchor: 'end' }));
   }
 
-  // Escalier : le score reste constant entre deux points, il ne progresse pas
-  // continument. Une ligne droite entre deux points mentirait sur le deroule.
+
   for (const side of [0, 1]) {
     let points = `${x(0)},${y(0)}`;
     let current = 0;

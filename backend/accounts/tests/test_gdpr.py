@@ -18,7 +18,6 @@ class GdprTestCase(TestCase):
         self.bob = User.objects.create_user(email="bob@42.lu", display_name="Bob",
                                             password=PASSWORD)
 
-        # Un peu de vie : un match, un message, une amitie, un jeton.
         self.match = game_services.create_local_match(alias1="Ada", alias2="Bob",
                                                       points_to_win=3, user=self.ada)
         self.match.player2 = self.bob
@@ -54,8 +53,6 @@ class ExportTest(GdprTestCase):
         payload = gdpr.export(self.ada)
         serialised = str(payload)
 
-        # Un fichier d'export circule par e-mail ou reste dans un dossier de
-        # telechargements : il ne doit contenir aucun element rejouable.
         self.assertNotIn("SECRETBASE32", serialised)
         self.assertNotIn(self.ada.password, serialised)
         self.assertNotIn("argon2", serialised)
@@ -89,7 +86,6 @@ class AnonymizeTest(GdprTestCase):
         self.match.refresh_from_db()
         self.assertNotEqual(self.match.player1_alias, "Ada")
         self.assertIn("supprime", self.match.player1_alias)
-        # Le match lui-meme survit : les statistiques de Bob restent justes.
         self.assertTrue(Match.objects.filter(pk=self.match.pk).exists())
 
     def test_message_content_is_erased_but_the_thread_survives(self):

@@ -1,12 +1,4 @@
-"""Comptes : inscription, connexion, profil, amis.
-
-Module « Standard user management, authentication, users across tournaments ».
-
-Toutes les routes de modification portent `@login_required` : le sujet insiste
-(« ensure your routes are protected »). Les routes de lecture publique se
-limitent a ce qu'un joueur accepte d'exposer — pseudo, avatar, statistiques —
-et jamais l'adresse e-mail.
-"""
+"""Comptes : inscription, connexion, profil, amis."""
 
 from __future__ import annotations
 
@@ -26,9 +18,6 @@ from core.validation import (field_str, validate_display_name, validate_email,
 from game import stats
 
 
-# ---------------------------------------------------------------------------
-#  Authentification
-# ---------------------------------------------------------------------------
 
 def _session_payload(user: User) -> dict:
     access_token, expires_in = jwt_utils.make_access_token(user.pk,
@@ -46,8 +35,6 @@ def register(request):
     email = validate_email(field_str(data, "email", max_len=254))
     display_name = validate_display_name(field_str(data, "display_name", max_len=64))
 
-    # Un utilisateur provisoire sert de contexte aux validateurs Django, qui
-    # refusent un mot de passe trop proche du pseudo ou de l'e-mail.
     candidate = User(email=email, display_name=display_name)
     password = validate_password(data.get("password"), candidate)
 
@@ -56,9 +43,6 @@ def register(request):
             user = User.objects.create_user(email=email, display_name=display_name,
                                             password=password)
     except IntegrityError:
-        # Le doublon est detecte par la contrainte d'unicite de PostgreSQL, pas
-        # par un `exists()` prealable : entre les deux, deux inscriptions
-        # simultanees passeraient toutes les deux.
         raise ApiError("account_exists",
                        "Un compte existe deja avec cet e-mail ou ce pseudo.", 409) from None
 
@@ -75,8 +59,6 @@ def login(request):
 
     user = User.objects.filter(email=email).first()
 
-    # Le hachage est calcule meme quand le compte n'existe pas : sans cela, le
-    # temps de reponse revelerait quelles adresses sont inscrites.
     if user is None:
         User().set_password(password if isinstance(password, str) else "")
         raise ApiError("invalid_credentials", "E-mail ou mot de passe incorrect.", 401)
@@ -88,8 +70,6 @@ def login(request):
 
     tokens.purge_expired()
 
-    # Le module 2FA intercepte ici : avec la double authentification active, le
-    # mot de passe ne donne qu'un jeton intermediaire, pas la session.
     if user.totp_enabled:
         return json_ok({
             "twofa_required": True,
@@ -110,8 +90,6 @@ def refresh(request):
     try:
         raw_next, user = tokens.rotate(raw)
     except ApiError:
-        # Session morte : on efface les cookies pour que le prochain
-        # chargement de page n'appelle plus cette route.
         response = json_ok({"error": "session_expired"}, status=401)
         return tokens.clear_session(response)
 
@@ -135,9 +113,6 @@ def logout_all(request):
     return tokens.clear_session(json_ok({"ok": True}))
 
 
-# ---------------------------------------------------------------------------
-#  Compte courant
-# ---------------------------------------------------------------------------
 
 @require_methods("GET", "PATCH")
 @login_required
@@ -185,8 +160,6 @@ def change_password(request):
     data = read_json(request)
     user = request.user
 
-    # Un compte cree via 42 n'a pas de mot de passe : il peut en definir un
-    # sans avoir a prouver l'ancien, qui n'existe pas.
     if user.has_usable_password():
         current = data.get("current_password")
         if not isinstance(current, str) or not user.check_password(current):
@@ -197,8 +170,6 @@ def change_password(request):
     user.set_password(new_password)
     user.save(update_fields=["password"])
 
-    # Changer de mot de passe doit fermer les sessions ouvertes ailleurs :
-    # c'est le geste attendu apres un soupcon de compromission.
     user.revoke_all_tokens()
 
     response = json_ok(_session_payload(user))
@@ -221,8 +192,6 @@ def avatar(request):
     processed = process_avatar(uploaded)
 
     if user.avatar:
-        # L'ancien fichier est supprime du disque : sans cela, chaque
-        # changement d'avatar laisserait un orphelin sur le volume.
         user.avatar.delete(save=False)
     user.avatar.save("avatar.png", processed, save=True)
     return json_ok({"user": user.private_dict()})
@@ -237,9 +206,6 @@ def my_matches(request):
     })
 
 
-# ---------------------------------------------------------------------------
-#  Autres joueurs
-# ---------------------------------------------------------------------------
 
 @require_methods("GET")
 @login_required
@@ -279,9 +245,6 @@ def user_detail(request, user_id):
     })
 
 
-# ---------------------------------------------------------------------------
-#  Amis
-# ---------------------------------------------------------------------------
 
 def _friendship_between(a: User, b: User) -> Friendship | None:
     return Friendship.objects.filter(
@@ -349,7 +312,6 @@ def _add_friend(request):
         if existing.status == Friendship.ACCEPTED:
             raise ApiError("already_friends", "Vous etes deja amis.", 409)
         if existing.to_user_id == request.user.pk:
-            # Demande croisee : les deux se sont ajoutes, on valide directement.
             existing.status = Friendship.ACCEPTED
             existing.accepted_at = timezone.now()
             existing.save(update_fields=["status", "accepted_at"])

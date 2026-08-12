@@ -1,18 +1,4 @@
-"""Salles de jeu : la boucle temps reel qui fait tourner le moteur.
-
-Une salle = un match en cours = une tache asyncio qui appelle `engine.tick()`
-60 fois par seconde et diffuse l'etat 30 fois par seconde au groupe de la
-partie.
-
-Pourquoi 60 et 30 : simuler a 60 Hz donne une physique stable et un rebond
-franc ; diffuser a 30 Hz suffit largement a l'oeil, et divise par deux le
-trafic. Le client comble l'ecart par interpolation.
-
-Le registre vit dans le process ASGI. C'est assume : le projet tourne avec un
-seul conteneur `backend`, et l'etat d'une partie en cours n'a aucune raison de
-survivre a son redemarrage. Passer a plusieurs workers demanderait de deplacer
-la boucle dans un worker dedie — c'est documente dans docs/decisions.md.
-"""
+"""Salles de jeu : la boucle temps reel qui fait tourner le moteur."""
 
 from __future__ import annotations
 
@@ -28,16 +14,11 @@ from game.engine import PongEngine
 
 logger = logging.getLogger(__name__)
 
-# Delai laisse a un joueur distant pour revenir apres une coupure. Au-dela, la
-# partie est perdue par forfait : sans limite, un joueur en difficulte pourrait
-# geler la partie indefiniment en debranchant son cable.
 DISCONNECT_GRACE = 20.0
 
-# Une partie creee mais que personne ne rejoint est nettoyee au bout de ce
-# delai, pour ne pas laisser de taches orphelines.
 EMPTY_ROOM_TIMEOUT = 120.0
 
-SNAPSHOT_EVERY = 2      # 60 Hz / 2 = 30 instantanes par seconde
+SNAPSHOT_EVERY = 2
 
 
 def group_name(match_id) -> str:
@@ -53,34 +34,25 @@ class MatchRoom:
         self.group = group_name(match_id)
         self.engine = PongEngine(points_to_win=points_to_win, seed=seed)
 
-        # channel_name -> ensemble des cotes que cette socket controle.
         self.channels: dict[str, set[int]] = {}
-        # Cote -> instant de deconnexion, pour le compte a rebours de forfait.
         self.disconnected_since: dict[int, float] = {}
 
         self.task: asyncio.Task | None = None
         self.started = False
         self.finished = False
         self.created_at = time.monotonic()
-        # Instant a partir duquel plus aucune socket n'est connectee.
         self.empty_since: float | None = None
-        # Chronologie des points, conservee pour le tableau de bord de partie.
         self.points_log: list[dict] = []
         self._layer = get_channel_layer()
         self._lock = asyncio.Lock()
 
-    # -- Participants -------------------------------------------------------
 
     @property
     def occupied_sides(self) -> set[int]:
         return {side for sides in self.channels.values() for side in sides}
 
     def claim(self, channel_name: str, sides: set[int]) -> bool:
-        """Enregistre une socket. Retourne True s'il s'agit d'un RETOUR.
-
-        Distinguer un retour d'une premiere arrivee permet de ne prevenir
-        l'adversaire que quand c'est pertinent.
-        """
+        """Enregistre une socket. Retourne True s'il s'agit d'un RETOUR."""
         self.channels[channel_name] = set(sides)
         return any(self.disconnected_since.pop(side, None) is not None for side in sides)
 
@@ -93,19 +65,11 @@ class MatchRoom:
         return sides
 
     def is_ready_to_start(self) -> bool:
-        """La partie demarre quand les deux raquettes ont un pilote.
-
-        En local, une seule socket revendique les deux cotes ; a distance,
-        chacun revendique le sien. Le test est le meme dans les deux cas.
-        """
+        """La partie demarre quand les deux raquettes ont un pilote."""
         return self.occupied_sides == {engine.LEFT, engine.RIGHT}
 
     def resume_if_ready(self) -> bool:
-        """Relance une partie mise en pause quand tout le monde est revenu.
-
-        Retourne False si rien n'etait en pause : une reconnexion assez rapide
-        pour precede le tick suivant n'a interrompu la partie de personne.
-        """
+        """Relance une partie mise en pause quand tout le monde est revenu."""
         if self.disconnected_since or not self.is_ready_to_start():
             return False
         if self.engine.status != engine.STATUS_PAUSED:
@@ -113,20 +77,14 @@ class MatchRoom:
         self.engine.resume()
         return True
 
-    # -- Entrees ------------------------------------------------------------
 
     def apply_input(self, channel_name: str, side: int, direction: int) -> bool:
-        """Applique un input si la socket controle bien ce cote.
-
-        C'est le controle d'autorisation du jeu : sans lui, n'importe quel
-        spectateur connecte au match pourrait bouger la raquette adverse.
-        """
+        """Applique un input si la socket controle bien ce cote."""
         if side not in self.channels.get(channel_name, set()):
             return False
         self.engine.set_input(side, direction)
         return True
 
-    # -- Boucle -------------------------------------------------------------
 
     async def start(self) -> None:
         async with self._lock:
@@ -160,16 +118,11 @@ class MatchRoom:
                     await self._finish()
                     break
 
-                # Rythme a derive compensee : on vise des instants absolus
-                # plutot que d'enchainer des `sleep(1/60)`, qui accumuleraient
-                # le temps de calcul de chaque tour et ralentiraient la partie.
                 next_at += period
                 delay = next_at - time.monotonic()
                 if delay > 0:
                     await asyncio.sleep(delay)
                 else:
-                    # Retard trop important (machine chargee) : on resynchronise
-                    # plutot que de rattraper en accelerant le jeu.
                     next_at = time.monotonic()
         except asyncio.CancelledError:
             raise
@@ -193,9 +146,6 @@ class MatchRoom:
     async def _check_presence(self) -> None:
         now = time.monotonic()
 
-        # Plus aucune socket : on gele la simulation (inutile de faire tourner
-        # une physique que personne ne regarde) et on abandonne la partie si
-        # personne ne revient.
         if not self.channels:
             if self.engine.status != engine.STATUS_PAUSED:
                 self.engine.pause()
@@ -302,7 +252,6 @@ class RoomRegistry:
 registry = RoomRegistry()
 
 
-# --- Acces base de donnees, appeles depuis le contexte asynchrone -----------
 
 def _mark_started(match_id) -> None:
     from game.models import Match

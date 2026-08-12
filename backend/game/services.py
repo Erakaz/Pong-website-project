@@ -1,10 +1,4 @@
-"""Operations metier sur les matchs et les tournois.
-
-Ces fonctions sont synchrones et transactionnelles ; la boucle de jeu, qui est
-asynchrone, les appelle via `database_sync_to_async`. Les regrouper ici evite
-que la meme logique soit reecrite dans les vues HTTP et dans les consumers
-WebSocket.
-"""
+"""Operations metier sur les matchs et les tournois."""
 
 from __future__ import annotations
 
@@ -18,17 +12,10 @@ from game import bracket, notifications
 from game.models import Match, Tournament, TournamentPlayer
 
 
-# ---------------------------------------------------------------------------
-#  Matchs
-# ---------------------------------------------------------------------------
 
 def create_local_match(*, alias1: str, alias2: str, points_to_win: int,
                        user=None) -> Match:
-    """Partie a deux sur le meme clavier — la partie obligatoire du sujet.
-
-    Un seul navigateur pilote les deux raquettes ; la physique tourne malgre
-    tout sur le serveur, exactement comme pour une partie a distance.
-    """
+    """Partie a deux sur le meme clavier — la partie obligatoire du sujet."""
     if alias1.casefold() == alias2.casefold():
         raise ApiError("duplicate_alias", "Les deux joueurs doivent avoir des alias differents.",
                        400, {"field": "alias2"})
@@ -54,8 +41,7 @@ def create_remote_match(*, user, points_to_win: int) -> Match:
 
 @transaction.atomic
 def join_remote_match(match_id, user) -> Match:
-    """Rejoint une partie ouverte. Verrouille la ligne pour eviter que deux
-    joueurs prennent la meme place au meme instant."""
+    """Rejoint une partie ouverte. Verrouille la ligne pour eviter que deux"""
     match = Match.objects.select_for_update().filter(pk=match_id).first()
     if match is None:
         raise ApiError("not_found", "Cette partie n'existe pas.", 404)
@@ -76,21 +62,13 @@ def join_remote_match(match_id, user) -> Match:
 @transaction.atomic
 def finish_match(match_id, snapshot: dict, stats: dict, *, forfeit: bool = False,
                  points_log: list | None = None) -> Match:
-    """Fige le resultat puis fait progresser le tournoi si le match en fait partie.
-
-    `of=("self",)` restreint le verrou a la ligne du match. Sans lui, PostgreSQL
-    refuse la requete : `select_related("tournament")` produit un LEFT OUTER
-    JOIN (le tournoi est facultatif), et un `SELECT ... FOR UPDATE` ne peut pas
-    porter sur le cote nullable d'une jointure externe. SQLite, lui, ignore
-    purement et simplement `FOR UPDATE` — d'ou une erreur invisible tant qu'on
-    ne teste pas sur la vraie base.
-    """
+    """Fige le resultat puis fait progresser le tournoi si le match en fait partie."""
     match = (Match.objects
              .select_for_update(of=("self",))
              .select_related("tournament")
              .get(pk=match_id))
     if match.state == Match.STATE_FINISHED:
-        return match          # deja enregistre (double appel possible a l'arret)
+        return match
 
     match.record_result(snapshot, stats, forfeit=forfeit, points_log=points_log)
     if match.tournament_id:
@@ -108,21 +86,11 @@ def abort_match(match_id) -> None:
         match.save(update_fields=["state", "finished_at"])
 
 
-# ---------------------------------------------------------------------------
-#  Tournois
-# ---------------------------------------------------------------------------
 
 @transaction.atomic
 def create_tournament(*, name: str, mode: str, points_to_win: int, entries: list[dict],
                       creator=None) -> Tournament:
-    """Cree un tournoi.
-
-    En mode local, tous les alias sont saisis d'un coup et le tableau est monte
-    immediatement — c'est le deroulement decrit par le sujet (« at the start of
-    a tournament, each player must input their alias name »). En mode a
-    distance, `entries` ne contient que le createur et les autres rejoignent
-    ensuite.
-    """
+    """Cree un tournoi."""
     tournament = Tournament.objects.create(
         name=name,
         mode=mode,
@@ -188,19 +156,12 @@ def start_tournament(tournament: Tournament) -> Tournament:
     tournament.started_at = timezone.now()
     tournament.save(update_fields=["size", "state", "started_at"])
 
-    # Le systeme de tournoi annonce le prochain combat (exigence du module
-    # « Live chat »).
     notifications.announce_next_match(tournament.next_match())
     return tournament
 
 
 def _materialize_bracket(tournament: Tournament, players: list[TournamentPlayer]) -> None:
-    """Cree d'un coup tous les matchs de tous les tours.
-
-    Les rencontres futures existent des le depart, avec des cotes vides : le
-    front peut donc afficher le tableau entier et l'ordre de passage, comme le
-    sujet l'exige, plutot que de decouvrir les matchs au fur et a mesure.
-    """
+    """Cree d'un coup tous les matchs de tous les tours."""
     count = len(players)
     size = bracket.bracket_size(count)
     total_rounds = bracket.rounds_count(count)
@@ -221,7 +182,6 @@ def _materialize_bracket(tournament: Tournament, players: list[TournamentPlayer]
 
     for slot_index, (left, right) in enumerate(bracket.first_round_pairings(count)):
         if left is None or right is None:
-            # Exemption : aucun match n'est joue, le joueur monte d'un tour.
             seed_index = left if right is None else right
             parent_round, parent_slot = bracket.parent_slot(0, slot_index)
             _seat(matches[(parent_round, parent_slot)],
@@ -237,9 +197,6 @@ def _materialize_bracket(tournament: Tournament, players: list[TournamentPlayer]
 
 
 def _seat(match: Match, side: int, player: TournamentPlayer) -> None:
-    # L'alias d'inscription est recopie sur le match : c'est sous ce nom que le
-    # tableau affiche la rencontre, et il reste juste meme si le compte est
-    # renomme plus tard.
     match.set_player(side, user=player.user, alias=player.alias)
 
 
@@ -272,16 +229,11 @@ def advance_tournament(match: Match) -> None:
     _seat(parent, bracket.parent_side(match.slot_index), winner)
     parent.save(update_fields=["player1", "player1_alias", "player2", "player2_alias", "state"])
 
-    # Des que la rencontre suivante a ses deux joueurs, on les previent.
     notifications.announce_next_match(tournament.next_match())
 
 
 def _tournament_player_for(tournament: Tournament, match: Match, side: int):
-    """Retrouve l'inscrit correspondant a un cote du match.
-
-    On cherche d'abord par compte : deux inscrits peuvent porter des alias
-    proches, mais jamais le meme compte (contrainte d'unicite du modele).
-    """
+    """Retrouve l'inscrit correspondant a un cote du match."""
     user = match.user_of(side)
     if user is not None:
         found = tournament.players.filter(user=user).first()

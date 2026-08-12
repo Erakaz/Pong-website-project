@@ -1,22 +1,9 @@
-/**
- * Rendu du terrain sur un canvas 2D.
- *
- * Le client ne simule rien : il recoit ~30 instantanes par seconde et les
- * affiche a 60 images par seconde. L'ecart est comble par **interpolation**
- * entre les deux instantanes qui encadrent l'instant affiche, avec un retard
- * volontaire de 100 ms (INTERP_DELAY). Sans ce retard, une trame reseau en
- * retard laisserait un trou et la balle sauterait ; avec lui, on interpole
- * toujours entre deux etats connus au lieu d'extrapoler dans le vide.
- *
- * Consequence assumee : on affiche le jeu tel qu'il etait il y a 100 ms. C'est
- * imperceptible a l'oeil et bien plus stable qu'une prediction qui se corrige.
- */
 
-const INTERP_DELAY = 100;   // ms
-const BUFFER_MAX = 40;      // ~1,3 s d'historique, largement suffisant
 
-/* Memes teintes que le reste du site (css/app.css) : noir cathodique,
-   phosphore blanc pour les raquettes, vert pour la balle. */
+const INTERP_DELAY = 100;
+const BUFFER_MAX = 40;
+
+
 const COLORS = {
   court: '#000000',
   line: '#1f2a33',
@@ -33,41 +20,25 @@ function lerp(from, to, ratio) {
 }
 
 export class PongRenderer {
-  /**
-   * @param {HTMLCanvasElement} canvas
-   * @param {object} geometry  constantes renvoyees par le serveur
-   */
+
   constructor(canvas, geometry) {
     this.canvas = canvas;
     this.context = canvas.getContext('2d', { alpha: false });
     this.setGeometry(geometry);
 
-    this.buffer = [];          // { at: ms local, state }
-    this.latest = null;        // dernier instantane recu, brut
+    this.buffer = [];
+    this.latest = null;
     this.frame = null;
-    this.flash = 0;            // duree restante d'un eclat apres un point
+    this.flash = 0;
 
-    // Prediction locale de sa propre raquette (voir enablePrediction).
+
     this.predictSide = null;
     this.predictY = null;
     this.predictDir = 0;
     this.paddleSpeed = geometry.paddle_speed;
   }
 
-  /**
-   * Active la prediction locale d'une raquette.
-   *
-   * Sans elle, appuyer sur une touche ne se voit qu'apres un aller-retour
-   * reseau plus les 100 ms d'interpolation : injouable des que la latence
-   * depasse quelques dizaines de millisecondes. Avec elle, sa propre raquette
-   * repond immediatement, tandis que la balle et la raquette adverse restent
-   * affichees telles que le serveur les a annoncees — c'est-a-dire sans jamais
-   * mentir sur ce qui fait autorite.
-   *
-   * L'ecart avec la position du serveur est resorbe progressivement, sauf s'il
-   * devient trop grand (rebond sur un mur, correction) : dans ce cas on saute
-   * directement a la position officielle.
-   */
+
   enablePrediction(side) {
     this.predictSide = side;
     this.predictDir = 0;
@@ -87,8 +58,7 @@ export class PongRenderer {
     this.margin = geometry.paddle_margin;
     this.ballRadius = geometry.ball_radius;
 
-    // Resolution interne fixe : le CSS l'etire ensuite. Le rapport 4/3 du
-    // terrain est celui du canvas, donc aucune deformation.
+
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
     this.canvas.width = Math.round(width * ratio);
     this.canvas.height = Math.round(height * ratio);
@@ -101,7 +71,7 @@ export class PongRenderer {
     if (this.buffer.length > BUFFER_MAX) this.buffer.shift();
   }
 
-  /** Signale un point marque : un bref eclat rend le score plus lisible. */
+
   pulse() {
     this.flash = 220;
   }
@@ -110,7 +80,7 @@ export class PongRenderer {
     if (this.frame !== null) return;
     let previous = performance.now();
     const loop = (now) => {
-      const dt = Math.min((now - previous) / 1000, 0.1);   // borne les gros a-coups
+      const dt = Math.min((now - previous) / 1000, 0.1);
       this.flash = Math.max(0, this.flash - (now - previous));
       previous = now;
 
@@ -121,7 +91,7 @@ export class PongRenderer {
     this.frame = window.requestAnimationFrame(loop);
   }
 
-  /** Remplace la position de sa propre raquette par la position predite. */
+
   applyPrediction(state, dt) {
     if (state === null || this.predictSide === null) return state;
 
@@ -131,8 +101,7 @@ export class PongRenderer {
       return state;
     }
 
-    // Les raquettes ne bougent ni en pause, ni une fois la partie terminee :
-    // predire un mouvement afficherait une raquette qui glisse toute seule.
+
     const running = state.status === 'playing' || state.status === 'countdown';
     if (running && this.predictDir !== 0) {
       const half = this.paddleH / 2;
@@ -142,9 +111,9 @@ export class PongRenderer {
 
     const error = serverY - this.predictY;
     if (Math.abs(error) > 60) {
-      this.predictY = serverY;             // trop loin : on se recale d'un coup
+      this.predictY = serverY;
     } else {
-      this.predictY += error * 0.12;       // sinon on rattrape en douceur
+      this.predictY += error * 0.12;
     }
 
     const paddles = state.paddles.slice();
@@ -159,7 +128,7 @@ export class PongRenderer {
     }
   }
 
-  /** Etat a afficher pour un instant donne, interpole entre deux instantanes. */
+
   sample(renderTime) {
     if (this.buffer.length === 0) return null;
     if (this.buffer.length === 1) return this.buffer[0].state;
@@ -184,9 +153,7 @@ export class PongRenderer {
       }
     }
 
-    // renderTime est hors de la fenetre bufferisee : soit la connexion a
-    // hoquete, soit la partie vient de commencer. On affiche l'etat le plus
-    // proche plutot que de figer un ecran vide.
+
     return renderTime < this.buffer[0].at
       ? this.buffer[0].state
       : this.buffer[this.buffer.length - 1].state;
@@ -205,8 +172,8 @@ export class PongRenderer {
     if (state) {
       this.drawScores(context, state.scores);
       this.drawPaddles(context, state.paddles);
-      // Pendant le decompte, la balle est au centre et immobile : on la
-      // masque pour que le decompte affiche soit sans ambiguite.
+
+
       if (state.status !== 'countdown') this.drawBall(context, state.ball);
       if (state.status === 'countdown') this.drawCountdown(context, state.timer);
       if (state.status === 'paused') this.drawBanner(context, 'En pause');
@@ -216,7 +183,7 @@ export class PongRenderer {
   }
 
   drawNet(context) {
-    // Filet en pointilles, comme sur la borne d'origine.
+
     context.fillStyle = COLORS.line;
     const dash = 14;
     const gap = 12;
@@ -231,8 +198,8 @@ export class PongRenderer {
     context.fillStyle = flashing ? COLORS.scoreFlash : COLORS.score;
     context.font = `56px ${FONT}`;
     context.textBaseline = 'top';
-    // Le score s'illumine brievement quand un point tombe : sur une borne, la
-    // remanence du phosphore produisait le meme effet.
+
+
     context.shadowColor = COLORS.ball;
     context.shadowBlur = flashing ? 22 : 0;
 
@@ -256,7 +223,7 @@ export class PongRenderer {
   }
 
   drawBall(context, ball) {
-    // Balle carree : c'est ainsi qu'elle apparaissait sur le Pong de 1972.
+
     const size = this.ballRadius * 2;
     context.fillStyle = COLORS.ball;
     context.shadowColor = COLORS.ball;

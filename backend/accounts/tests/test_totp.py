@@ -6,8 +6,6 @@ import unittest
 
 from accounts import totp
 
-# Annexe B de la RFC 6238 : la cle de test est la chaine ASCII
-# « 12345678901234567890 », et les codes sont donnes sur 8 chiffres en SHA-1.
 RFC_SECRET = base64.b32encode(b"12345678901234567890").decode("ascii")
 
 RFC_VECTORS = [
@@ -27,7 +25,6 @@ class RfcComplianceTest(unittest.TestCase):
                 self.assertEqual(totp.totp(RFC_SECRET, at=timestamp, digits=8), expected)
 
     def test_hotp_matches_rfc4226_first_values(self):
-        # Annexe D de la RFC 4226, meme cle.
         expected = ["755224", "287082", "359152", "969429", "338314"]
         for counter, code in enumerate(expected):
             self.assertEqual(totp.hotp(RFC_SECRET, counter), code)
@@ -90,9 +87,6 @@ class SecretTest(unittest.TestCase):
 
     def test_provisioning_uri_escapes_the_account(self):
         uri = totp.provisioning_uri("ABCD", "a b/c@42.lu")
-        # Un espace ou un slash non echappe dans le libelle casserait l'analyse
-        # de l'URI par l'application d'authentification. Les seuls slashes
-        # restants sont donc ceux du schema : « otpauth://totp/ ».
         self.assertNotIn(" ", uri)
         self.assertEqual(uri.count("/"), 3)
         self.assertIn("a%20b%2Fc%4042.lu", uri)

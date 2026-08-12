@@ -11,18 +11,11 @@ from core.http import json_error, json_ok, require_methods
 
 @require_methods("GET")
 def health(request: HttpRequest) -> HttpResponse:
-    """Sonde de vivacite utilisee par le healthcheck Docker du service backend.
-
-    Volontairement sans acces a la base : elle repond a « le process ASGI
-    repond-il ? ». La disponibilite de PostgreSQL est deja garantie par la
-    condition `service_healthy` de docker-compose.
-    """
+    """Sonde de vivacite utilisee par le healthcheck Docker du service backend."""
     return json_ok(
         {
             "status": "ok",
             "time": timezone.now().isoformat(),
-            # Le frontend s'en sert pour masquer le bouton « Se connecter avec
-            # 42 » quand le module n'est pas configure.
             "features": {"oauth42": settings.OAUTH42_ENABLED},
         }
     )

@@ -29,8 +29,8 @@ export default function render(context) {
         }, { auth: false });
 
         if (data.twofa_required) {
-          // Le mot de passe seul ne cree pas de session : on passe a l'etape
-          // du code a usage unique avec un jeton intermediaire de 5 minutes.
+
+
           window.sessionStorage.setItem('ftt_twofa', data.twofa_token);
           context.router.navigate('/login/2fa');
           return;
@@ -75,8 +75,8 @@ function oauthBlock() {
       el('span', { class: 'small' }, 'ou'),
       el('hr', { class: 'flex-grow-1 m-0' }),
     ),
-    // Lien classique et non appel fetch : la connexion 42 est une redirection
-    // de navigation complete vers l'intra, puis un retour sur notre callback.
+
+
     el('a', {
       class: 'btn btn-outline-light w-100',
       href: '/api/auth/oauth42/login',

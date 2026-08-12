@@ -1,10 +1,4 @@
-/**
- * Page d'une partie.
- *
- * Assemble les trois briques du client de jeu : la socket (net.js), le clavier
- * (input.js) et le rendu (renderer.js). Cette vue ne contient aucune regle de
- * jeu — pas une ligne de physique, pas un test de score. Tout vient du serveur.
- */
+
 
 import { get } from '../api.js';
 import { el } from '../dom.js';
@@ -34,13 +28,11 @@ export default async function render(context) {
 
   const { match, geometry } = payload;
 
-  /* --- Elements de page ------------------------------------------------- */
 
   const scoreLeft = el('span', { class: 'score-value' }, String(match.scores[0]));
   const scoreRight = el('span', { class: 'score-value' }, String(match.scores[1]));
 
-  // Le score est aussi expose en texte pour les lecteurs d'ecran : le canvas,
-  // lui, est totalement opaque aux technologies d'assistance.
+
   const liveScore = el('p', {
     class: 'visually-hidden',
     role: 'status',
@@ -95,7 +87,6 @@ export default async function render(context) {
     hint,
   );
 
-  /* --- Machinerie temps reel -------------------------------------------- */
 
   const renderer = new PongRenderer(canvas, geometry);
   let controls = null;
@@ -139,8 +130,7 @@ export default async function render(context) {
 
       hint.textContent = KeyboardControls.hint(message.sides);
 
-      // En partie a distance, on ne pilote qu'une raquette : elle est predite
-      // localement pour repondre sans attendre l'aller-retour reseau.
+
       if (message.sides.length === 1) renderer.enablePrediction(message.sides[0]);
 
       controls = new KeyboardControls(message.sides, (side, direction) => {
@@ -158,7 +148,7 @@ export default async function render(context) {
     },
 
     onPlayer(message) {
-      // Un joueur a pris une place : on rafraichit les noms affiches.
+
       Object.assign(match, message.match);
       leftName.textContent = match.players[0].alias || 'Joueur 1';
       rightName.textContent = match.players[1].alias || 'En attente…';
@@ -167,8 +157,8 @@ export default async function render(context) {
 
     onEvents(message) {
       for (const event of message.events) {
-        // Les evenements du moteur pilotent le son et l'eclat du score : le
-        // client ne devine rien, il reagit a ce que le serveur annonce.
+
+
         if (event.type === 'score') renderer.pulse();
         sound.play(event.type === 'serve' ? 'wall' : event.type);
       }
@@ -243,9 +233,8 @@ export default async function render(context) {
 
   return {
     node,
-    // Contrat du routeur : quitter la page arrete tout. Sans ce nettoyage, la
-    // boucle d'animation continuerait de tourner et la socket resterait
-    // ouverte, ce qui empecherait la partie de se liberer cote serveur.
+
+
     cleanup() {
       socket.close();
       renderer.stop();

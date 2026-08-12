@@ -1,14 +1,4 @@
-/**
- * Client HTTP de l'API.
- *
- * Trois responsabilites :
- *  1. joindre l'access token en en-tete Authorization ;
- *  2. rejouer une requete une seule fois apres un rafraichissement silencieux
- *     quand le serveur repond `token_expired` ;
- *  3. normaliser toutes les erreurs en `ApiError`, pour que les vues aient un
- *     seul type d'erreur a gerer et qu'aucune promesse ne parte en rejet non
- *     capture (le sujet exige zero erreur en console).
- */
+
 
 import { clearSession, getState, setSession } from './store.js';
 
@@ -26,8 +16,8 @@ export class ApiError extends Error {
 }
 
 function readCookie(name) {
-  // Le cookie CSRF est volontairement lisible par le JS : c'est le principe de
-  // la double soumission. Le refresh token, lui, est httpOnly et invisible ici.
+
+
   const prefix = `${name}=`;
   for (const part of document.cookie.split(';')) {
     const trimmed = part.trim();
@@ -36,15 +26,7 @@ function readCookie(name) {
   return null;
 }
 
-/**
- * Y a-t-il potentiellement une session a restaurer ?
- *
- * Le cookie de refresh est httpOnly, donc invisible d'ici ; le cookie CSRF est
- * pose en meme temps, avec la meme duree de vie, et sert de temoin. Sans ce
- * test, chaque premiere visite declencherait un POST /api/auth/refresh
- * repondant 401 — et Chrome ecrit toute reponse 4xx dans la console, alors que
- * le sujet exige zero erreur affichee.
- */
+
 export function hasSessionCookie() {
   return readCookie(CSRF_COOKIE) !== null;
 }
@@ -70,7 +52,7 @@ async function parseResponse(response) {
     error.message || `Erreur ${response.status}.`, response.status, error.details || {});
 }
 
-/** Un seul rafraichissement en vol a la fois, partage par tous les appelants. */
+
 let refreshInFlight = null;
 
 export function refreshSession() {
@@ -99,14 +81,7 @@ export function refreshSession() {
   return refreshInFlight;
 }
 
-/**
- * @param {string} path            chemin commencant par /api/
- * @param {object} [options]
- * @param {string} [options.method]
- * @param {object} [options.body]  serialise en JSON
- * @param {FormData} [options.formData] envoye tel quel (televersement d'avatar)
- * @param {boolean} [options.auth] false pour une route publique
- */
+
 export async function api(path, options = {}) {
   const {
     method = 'GET',
@@ -131,7 +106,7 @@ export async function api(path, options = {}) {
 
   let payload;
   if (formData) {
-    payload = formData;                                  // le navigateur pose le Content-Type
+    payload = formData;
   } else if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
     payload = JSON.stringify(body);
@@ -157,7 +132,7 @@ export async function api(path, options = {}) {
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
 
-    // Jeton perime : on tente un rafraichissement transparent, une seule fois.
+
     if (error.code === 'token_expired' && auth && retryOnExpired) {
       try {
         await refreshSession();

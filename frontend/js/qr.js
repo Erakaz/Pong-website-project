@@ -1,19 +1,4 @@
-/**
- * Rendu d'un QR code en SVG.
- *
- * S'appuie sur `qrcode-generator` (Kazuhiko Arase, licence MIT), vendorise
- * dans `vendor/qrcode/`. C'est une bibliotheque a usage unique — elle calcule
- * une matrice de modules, rien d'autre — ce qui reste dans ce que le sujet
- * autorise : « a small library that solves a simple and unique task ».
- *
- * Le fichier est en UMD, donc chargeable seulement par balise `<script>` et
- * pas par `import`. Il est injecte a la demande, uniquement sur l'ecran de
- * double authentification : les autres pages ne le telechargent jamais.
- *
- * Le QR est dessine dans le navigateur, a partir de l'URI `otpauth://` recue
- * du serveur. Le secret ne quitte donc jamais l'application — le faire generer
- * par une API de QR code en ligne reviendrait a l'envoyer a un tiers.
- */
+
 
 const SCRIPT_URL = '/vendor/qrcode/qrcode.js';
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -37,23 +22,17 @@ function loadLibrary() {
   return loading;
 }
 
-/**
- * @param {string} text        contenu encode (ici l'URI otpauth://)
- * @param {number} [size]      cote du SVG en pixels
- * @returns {Promise<SVGElement>}
- */
+
 export async function renderQr(text, { size = 208, label = 'QR code de configuration' } = {}) {
   const qrcode = await loadLibrary();
 
-  // Type 0 = choix automatique de la version selon la longueur du contenu.
-  // Correction d'erreur « M » : le compromis habituel entre densite et
-  // tolerance aux reflets de l'ecran.
+
   const generator = qrcode(0, 'M');
   generator.addData(text);
   generator.make();
 
   const count = generator.getModuleCount();
-  const quiet = 2;                       // marge blanche obligatoire autour du code
+  const quiet = 2;
   const total = count + quiet * 2;
 
   const svg = document.createElementNS(SVG_NS, 'svg');
@@ -70,8 +49,7 @@ export async function renderQr(text, { size = 208, label = 'QR code de configura
   background.setAttribute('fill', '#ffffff');
   svg.appendChild(background);
 
-  // Un seul `path` pour toute la matrice : quelques centaines de `rect`
-  // alourdiraient inutilement le DOM.
+
   let path = '';
   for (let row = 0; row < count; row += 1) {
     for (let column = 0; column < count; column += 1) {

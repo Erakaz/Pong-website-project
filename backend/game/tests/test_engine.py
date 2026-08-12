@@ -1,10 +1,4 @@
-"""Tests du moteur physique.
-
-Volontairement ecrits avec `unittest` de la bibliotheque standard, sans
-`django.test` : le moteur n'a aucune dependance a Django, ces tests tournent
-donc aussi bien dans la suite Django (`manage.py test`) qu'en isolation
-(`python -m unittest game.tests.test_engine`), sans base de donnees.
-"""
+"""Tests du moteur physique."""
 
 import math
 import unittest
@@ -54,8 +48,6 @@ class PaddleRulesTest(unittest.TestCase):
 
     def test_input_is_normalised_to_three_values(self):
         game = PongEngine(seed=3)
-        # Un client malveillant envoyant 999 ne doit pas obtenir une raquette
-        # 999 fois plus rapide.
         game.set_input(LEFT, 999)
         self.assertEqual(game.paddles[LEFT].direction, 1)
         game.set_input(LEFT, -999)
@@ -65,7 +57,7 @@ class PaddleRulesTest(unittest.TestCase):
 
     def test_unknown_player_index_is_ignored(self):
         game = PongEngine(seed=4)
-        game.set_input(7, 1)  # ne doit pas lever ni creer de raquette
+        game.set_input(7, 1)
         self.assertEqual(len(game.paddles), 2)
 
 
@@ -96,8 +88,6 @@ class BallPhysicsTest(unittest.TestCase):
         """La balle ne doit jamais traverser une raquette (effet tunnel)."""
         game = PongEngine(seed=7, points_to_win=engine.MAX_POINTS_TO_WIN)
 
-        # Les deux raquettes suivent la balle : aucun but ne devrait etre
-        # marque, meme quand la balle atteint sa vitesse maximale.
         def follow(instance, _step):
             for index, paddle in enumerate(instance.paddles):
                 delta = instance.ball.y - paddle.y
@@ -129,8 +119,6 @@ class BallPhysicsTest(unittest.TestCase):
 
     def test_bounce_angle_never_exceeds_the_maximum(self):
         game = PongEngine(seed=17)
-        # Impact au bord extreme de la raquette : c'est l'angle le plus ferme
-        # que le moteur puisse produire.
         game.status = engine.STATUS_PLAYING
         game.ball.x = engine.PADDLE_MARGIN + engine.PADDLE_W + engine.BALL_RADIUS - 0.5
         game.ball.y = game.paddles[LEFT].y + engine.PADDLE_H / 2
@@ -149,7 +137,7 @@ class ScoringTest(unittest.TestCase):
         game = PongEngine(seed=21)
         game.status = engine.STATUS_PLAYING
         game.ball.x = engine.BALL_RADIUS
-        game.ball.y = 30.0                       # loin de la raquette
+        game.ball.y = 30.0
         game.paddles[LEFT].y = engine.FIELD_H - 60
         game.ball.vx = -engine.BALL_SPEED_START
         game.ball.vy = 0.0
@@ -172,9 +160,6 @@ class ScoringTest(unittest.TestCase):
 
         play(game, 1.0)
 
-        # LEFT a encaisse : la balle est remise en jeu vers LEFT, a lui de la
-        # renvoyer. Consequence assumee : un joueur qui ne defend pas encaisse
-        # plusieurs points d'affilee.
         self.assertLess(game.ball.vx, 0)
 
     def test_match_ends_at_the_target_score(self):
@@ -209,7 +194,7 @@ class ScoringTest(unittest.TestCase):
 class InterruptionTest(unittest.TestCase):
     def test_pause_freezes_everything_and_resume_restarts_with_a_countdown(self):
         game = PongEngine(seed=37)
-        play(game, engine.COUNTDOWN + 0.3)          # le decompte est passe
+        play(game, engine.COUNTDOWN + 0.3)
         self.assertEqual(game.status, engine.STATUS_PLAYING)
 
         position = (game.ball.x, game.ball.y)
@@ -221,8 +206,6 @@ class InterruptionTest(unittest.TestCase):
         self.assertEqual((game.ball.x, game.ball.y), position, "la balle a bouge en pause")
         self.assertEqual(game.paddles[LEFT].y, paddle_y, "une raquette a bouge en pause")
 
-        # On ne reprend jamais balle en jeu : celui qui revient d'une coupure
-        # doit avoir le temps de se replacer.
         game.resume()
         self.assertEqual(game.status, engine.STATUS_COUNTDOWN)
 
@@ -261,8 +244,6 @@ class SnapshotTest(unittest.TestCase):
         self.assertEqual(len(snapshot["paddles"]), 2)
 
     def test_geometry_exposes_the_shared_paddle_speed(self):
-        # Le client dessine a partir de ces valeurs : elles ne doivent jamais
-        # etre codees en dur cote JavaScript.
         self.assertEqual(engine.geometry()["paddle_speed"], engine.PADDLE_SPEED)
         self.assertEqual(engine.geometry()["field"], [engine.FIELD_W, engine.FIELD_H])
 

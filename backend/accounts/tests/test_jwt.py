@@ -1,9 +1,4 @@
-"""Tests du JWT maison.
-
-Chaque test correspond a une attaque concrete contre une implementation naive
-de JWT. Ils sont la garantie que l'implementation du module « 2FA + JWT » ne
-retombe pas dans les pieges classiques.
-"""
+"""Tests du JWT maison."""
 
 import base64
 import json
@@ -38,7 +33,6 @@ class JwtTest(SimpleTestCase):
         self.assertEqual(jwt_utils.user_id_from_token(token), 42)
 
     def test_no_padding_in_segments(self):
-        # La RFC 7515 impose du base64url SANS remplissage.
         token, _ = jwt_utils.make_access_token(1)
         self.assertNotIn("=", token)
 
@@ -51,12 +45,7 @@ class JwtTest(SimpleTestCase):
             jwt_utils.decode(forged, expected_type=jwt_utils.TOKEN_TYPE_ACCESS)
 
     def test_algorithm_none_is_rejected(self):
-        """Faille historique : accepter l'algorithme annonce par le jeton.
-
-        Un attaquant remplace `alg` par `none`, supprime la signature, et le
-        serveur accepte n'importe quelle charge utile. Ici l'algorithme est
-        impose par le serveur.
-        """
+        """Faille historique : accepter l'algorithme annonce par le jeton."""
         payload = {"iss": "ft_transcendence", "sub": "999",
                    "typ": jwt_utils.TOKEN_TYPE_ACCESS,
                    "iat": int(time.time()), "exp": int(time.time()) + 600}
@@ -72,21 +61,18 @@ class JwtTest(SimpleTestCase):
                 jwt_utils.decode(token, expected_type=jwt_utils.TOKEN_TYPE_ACCESS)
 
     def test_expired_token_reports_its_own_code(self):
-        # Emis il y a plus longtemps que sa duree de vie.
         token, ttl = jwt_utils.make_access_token(1, issued_at=int(time.time()) - 10_000)
         self.assertGreater(10_000, ttl)
 
         with self.assertRaises(ApiError) as caught:
             jwt_utils.decode(token, expected_type=jwt_utils.TOKEN_TYPE_ACCESS)
-        # Le frontend s'appuie sur ce code pour tenter un rafraichissement
-        # silencieux plutot que de deconnecter l'utilisateur.
         self.assertEqual(caught.exception.code, "token_expired")
 
     def test_a_twofa_token_is_not_an_access_token(self):
         """Un jeton intermediaire de 2FA ne doit ouvrir aucune route."""
         token = jwt_utils.make_twofa_token(7)
 
-        jwt_utils.decode(token, expected_type=jwt_utils.TOKEN_TYPE_TWOFA)   # valide
+        jwt_utils.decode(token, expected_type=jwt_utils.TOKEN_TYPE_TWOFA)
         with self.assertRaises(ApiError):
             jwt_utils.decode(token, expected_type=jwt_utils.TOKEN_TYPE_ACCESS)
 

@@ -1,10 +1,4 @@
-/**
- * Page d'accueil.
- *
- * Une borne d'arcade : le titre, l'ecran d'attente qui joue tout seul, et
- * l'invitation a lancer une partie. Rien d'autre — l'etat d'avancement du
- * projet n'a pas sa place ici, il est dans docs/.
- */
+
 
 import { startAttract } from '../attract.js';
 import { el } from '../dom.js';
@@ -12,11 +6,11 @@ import { isAuthenticated } from '../store.js';
 
 export default function render() {
   const canvas = el('canvas', {
-    'aria-hidden': 'true',      // decoratif : rien a annoncer a un lecteur d'ecran
+    'aria-hidden': 'true',
   });
 
   const node = el('div', {},
-    /* --- Banniere ------------------------------------------------------- */
+
     el('section', { class: 'hero' },
       el('p', { class: 'hero-tagline' }, '42 · depuis 1972'),
       el('h1', { class: 'hero-title' }, 'PONG'),
@@ -40,7 +34,7 @@ export default function render() {
       ),
     ),
 
-    /* --- Commandes ------------------------------------------------------- */
+
     el('section', { class: 'mt-4' },
       el('h2', { class: 'text-center mb-4' }, 'Commandes'),
       el('div', { class: 'controls-strip' },
@@ -60,6 +54,6 @@ export default function render() {
 
   const stop = startAttract(canvas);
 
-  // Contrat du routeur : quitter la page arrete la boucle d'animation.
+
   return { node, cleanup: stop };
 }

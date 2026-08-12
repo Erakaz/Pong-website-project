@@ -1,25 +1,4 @@
-"""Authentification distante via OAuth 2.0 avec l'intra 42.
-
-Flux « authorization code » classique, ecrit a la main avec `urllib` de la
-bibliotheque standard : `django-allauth` resoudrait a lui seul tout le module,
-ce que le sujet interdit.
-
-Deroulement :
-
-1. le navigateur part sur l'intra avec un parametre `state` imprevisible, dont
-   une copie est deposee dans un cookie ephemere ;
-2. l'intra renvoie sur notre callback avec un `code` et le meme `state` ;
-3. le `state` recu est compare a celui du cookie. Sans ce controle, un tiers
-   pourrait declencher la fin du flux avec SON code et lier son compte 42 au
-   navigateur de la victime (« login CSRF ») ;
-4. le `code` est echange contre un jeton d'acces, cote serveur uniquement, ce
-   qui evite d'exposer le secret client.
-
-Pas de PKCE ici, volontairement : PKCE protege les clients dits publics, ceux
-qui ne peuvent pas garder de secret (applications mobiles, SPA sans backend).
-Notre client est confidentiel — l'echange se fait de serveur a serveur avec
-`OAUTH42_SECRET`, qui ne quitte jamais le conteneur.
-"""
+"""Authentification distante via OAuth 2.0 avec l'intra 42."""
 
 from __future__ import annotations
 
@@ -37,8 +16,8 @@ from core.http import ApiError
 logger = logging.getLogger(__name__)
 
 STATE_COOKIE = "ftt_oauth_state"
-STATE_TTL = 600            # 10 minutes pour terminer le parcours
-HTTP_TIMEOUT = 10          # secondes
+STATE_TTL = 600
+HTTP_TIMEOUT = 10
 
 
 def ensure_enabled() -> None:
@@ -52,13 +31,7 @@ def ensure_enabled() -> None:
 
 
 def make_state(payload: str = "") -> str:
-    """Valeur anti-rejeu, eventuellement porteuse d'une intention.
-
-    Le format `alea:intention` permet de distinguer une simple connexion d'une
-    liaison de compte, sans table temporaire cote serveur : l'integrite est
-    assuree par la comparaison avec le cookie, que seul notre domaine peut
-    poser.
-    """
+    """Valeur anti-rejeu, eventuellement porteuse d'une intention."""
     return f"{secrets.token_urlsafe(24)}:{payload}" if payload else secrets.token_urlsafe(24)
 
 
@@ -90,8 +63,6 @@ def _post_json(url: str, data: dict) -> dict:
         with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as response:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
-        # Le corps de la reponse d'erreur peut contenir le secret client
-        # renvoye en echo : il n'est jamais journalise ni transmis au client.
         logger.warning("Echange de jeton 42 refuse (HTTP %s)", error.code)
         raise ApiError("oauth42_failed",
                        "L'intra 42 a refuse l'authentification.", 502) from None
@@ -142,7 +113,6 @@ def fetch_profile(access_token: str) -> dict:
 
     email = data.get("email") or ""
     return {
-        # L'identifiant numerique est l'ancre : un login 42 peut changer, pas lui.
         "id": str(identifier),
         "login": str(login)[:64],
         "email": str(email).lower()[:254],

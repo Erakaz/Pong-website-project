@@ -29,7 +29,6 @@ class TwoFactorFlowTest(TestCase):
         self.assertEqual(response.status_code, 200)
         return response.json()["backup_codes"]
 
-    # -- Activation ---------------------------------------------------------
 
     def test_setup_returns_a_scannable_uri(self):
         response = self.client.post("/api/me/2fa/setup", "{}",
@@ -38,8 +37,6 @@ class TwoFactorFlowTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(payload["otpauth_uri"].startswith("otpauth://totp/"))
-        # Le secret est enregistre mais la 2FA n'est PAS encore active : sans
-        # code de confirmation, une erreur de scan enfermerait le compte dehors.
         self.user.refresh_from_db()
         self.assertTrue(self.user.totp_secret)
         self.assertFalse(self.user.totp_enabled)
@@ -68,11 +65,8 @@ class TwoFactorFlowTest(TestCase):
     def test_enabling_closes_other_sessions(self):
         old_headers = dict(self.headers)
         self._enable()
-        # Les sessions ouvertes avant l'activation n'ont pas passe le second
-        # facteur : elles doivent tomber.
         self.assertEqual(self.client.get("/api/me", **old_headers).status_code, 401)
 
-    # -- Connexion en deux temps -------------------------------------------
 
     def test_password_alone_no_longer_opens_a_session(self):
         self._enable()
@@ -130,7 +124,6 @@ class TwoFactorFlowTest(TestCase):
         }, content_type="application/json")
         self.assertEqual(response.status_code, 401)
 
-    # -- Codes de secours ---------------------------------------------------
 
     def test_a_backup_code_replaces_the_application_code(self):
         codes = self._enable()
@@ -169,7 +162,6 @@ class TwoFactorFlowTest(TestCase):
         }, content_type="application/json")
         self.assertEqual(response.status_code, 200)
 
-    # -- Desactivation ------------------------------------------------------
 
     def test_disabling_requires_the_password(self):
         self._enable()

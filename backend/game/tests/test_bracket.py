@@ -21,8 +21,8 @@ class BracketSizeTest(unittest.TestCase):
                 bracket.bracket_size(count)
 
     def test_rounds_count(self):
-        self.assertEqual(bracket.rounds_count(2), 1)   # finale seule
-        self.assertEqual(bracket.rounds_count(4), 2)   # demies + finale
+        self.assertEqual(bracket.rounds_count(2), 1)
+        self.assertEqual(bracket.rounds_count(4), 2)
         self.assertEqual(bracket.rounds_count(5), 3)
         self.assertEqual(bracket.rounds_count(16), 4)
 
@@ -40,8 +40,8 @@ class SeedOrderTest(unittest.TestCase):
 
     def test_top_seeds_meet_the_bottom_seeds_first(self):
         pairings = bracket.first_round_pairings(8)
-        self.assertIn((0, 7), pairings)   # 1er contre 8e
-        self.assertIn((1, 6), pairings)   # 2e contre 7e
+        self.assertIn((0, 7), pairings)
+        self.assertIn((1, 6), pairings)
 
 
 class PairingTest(unittest.TestCase):
@@ -59,8 +59,6 @@ class PairingTest(unittest.TestCase):
                              f"placement incorrect pour {count} joueurs")
 
     def test_byes_go_to_the_best_seeds(self):
-        # A 5 joueurs, le tableau fait 8 : trois exemptions, pour les trois
-        # premieres tetes de serie.
         exempted = {pair[0] if pair[1] is None else pair[1]
                     for pair in bracket.first_round_pairings(5)
                     if None in pair}
@@ -80,15 +78,13 @@ class PairingTest(unittest.TestCase):
 
 class ProgressionTest(unittest.TestCase):
     def test_winners_converge_towards_the_final(self):
-        # Huit joueurs : les slots 0 et 1 du premier tour alimentent le slot 0
-        # du deuxieme, et occupent respectivement le cote gauche et droit.
         self.assertEqual(bracket.parent_slot(0, 0), (1, 0))
         self.assertEqual(bracket.parent_slot(0, 1), (1, 0))
         self.assertEqual(bracket.parent_side(0), 0)
         self.assertEqual(bracket.parent_side(1), 1)
 
     def test_the_whole_bracket_collapses_to_a_single_final_match(self):
-        slots = list(range(8))            # 8 matchs au premier tour -> 16 joueurs
+        slots = list(range(8))
         round_index = 0
         while len(slots) > 1:
             slots = sorted({bracket.parent_slot(round_index, slot)[1] for slot in slots})

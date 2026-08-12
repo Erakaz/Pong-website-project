@@ -1,8 +1,5 @@
-# Contexte de build = racine du projet (voir docker-compose.yml), car cette
-# image embarque a la fois la configuration nginx et le frontend statique.
 FROM nginx:1.27-alpine
 
-# openssl sert uniquement a generer le certificat auto-signe au demarrage.
 RUN apk add --no-cache openssl
 
 COPY nginx/nginx.conf /etc/nginx/nginx.conf

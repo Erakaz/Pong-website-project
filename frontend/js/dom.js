@@ -1,21 +1,5 @@
-/**
- * Construction du DOM sans jamais passer par innerHTML.
- *
- * C'est la brique anti-XSS du frontend : tout texte issu du serveur ou d'un
- * autre joueur (pseudo, message de chat, alias de tournoi) devient un noeud
- * texte, jamais du HTML interprete. Combine a la CSP sans `unsafe-inline`
- * (voir nginx.conf), une injection reste inerte meme si un echappement etait
- * oublie quelque part.
- *
- * Regle du projet : `innerHTML` n'apparait nulle part dans js/.
- */
 
-/**
- * @param {string} tag       nom de balise
- * @param {object} [props]   attributs, `class`, `dataset`, `on*` gestionnaires
- * @param {...(Node|string|number|null|undefined|Array)} children
- * @returns {HTMLElement}
- */
+
 export function el(tag, props = {}, ...children) {
   const node = document.createElement(tag);
 
@@ -47,7 +31,7 @@ export function el(tag, props = {}, ...children) {
   return node;
 }
 
-/** Ajoute des enfants en aplatissant les tableaux et en ignorant les vides. */
+
 export function append(parent, children) {
   for (const child of children.flat(Infinity)) {
     if (child === null || child === undefined || child === false) continue;
@@ -56,23 +40,23 @@ export function append(parent, children) {
   return parent;
 }
 
-/** Fragment : permet a une vue de renvoyer plusieurs noeuds racine. */
+
 export function frag(...children) {
   return append(document.createDocumentFragment(), children);
 }
 
-/** Vide un noeud sans laisser de gestionnaires orphelins. */
+
 export function clear(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
   return node;
 }
 
-/** Raccourci pour un noeud texte explicite. */
+
 export function text(value) {
   return document.createTextNode(String(value));
 }
 
-/** Icone SVG inline, dessinee a partir d'un chemin (aucune police externe). */
+
 export function icon(pathData, { size = 16, label = null } = {}) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 16 16');

@@ -1,10 +1,4 @@
-/**
- * Tableau de bord d'un joueur (module « User and Game Stats Dashboards »).
- *
- * Chaque graphique est double d'un tableau ou d'une liste chiffree : un
- * lecteur d'ecran, ou simplement quelqu'un qui prefere les nombres, accede aux
- * memes informations.
- */
+
 
 import { get } from '../api.js';
 import { COLORS, donut, formLines, legend, opponentBars } from '../charts.js';

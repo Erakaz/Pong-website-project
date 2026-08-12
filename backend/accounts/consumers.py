@@ -1,17 +1,4 @@
-"""Socket de session : presence en ligne et notifications.
-
-Une seule socket par onglet connecte, ouverte pendant toute la navigation. Elle
-porte :
-
-* la **presence** — tant qu'elle est ouverte, son proprietaire est « en ligne »,
-  et ses amis en sont informes en temps reel (module « User management ») ;
-* les **notifications** — invitations a jouer, annonce du prochain match de
-  tournoi, messages directs (module « Live chat », branche a la phase suivante).
-
-Le groupe `user.<id>` sert de boite aux lettres personnelle : n'importe quelle
-partie du serveur peut y deposer un message pour cet utilisateur, quel que soit
-l'onglet ou il se trouve.
-"""
+"""Socket de session : presence en ligne et notifications."""
 
 from __future__ import annotations
 
@@ -40,8 +27,6 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self) -> None:
         self.user: User | None = None
         await self.accept()
-        # Le client dispose d'un court instant pour s'authentifier ; sans quoi
-        # il ne recevra jamais rien, faute d'appartenir a un groupe.
 
     async def disconnect(self, code: int) -> None:
         if self.user is None:
@@ -81,8 +66,6 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
                                          "message": error.message})
 
         payload = {"type": "live.chat", "message": message}
-        # Livre au destinataire, et renvoye a l'expediteur : ses autres onglets
-        # doivent voir le message qu'il vient d'envoyer.
         await self.channel_layer.group_send(user_group(recipient_id), payload)
         await self.channel_layer.group_send(user_group(self.user.pk), payload)
 
@@ -104,8 +87,6 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
         await self.send_json({
             "type": "ready",
             "user_id": user.pk,
-            # L'etat initial des amis evite une requete HTTP supplementaire au
-            # chargement de la liste d'amis.
             "online_friends": sorted(presence.filter_online(await _friend_ids(user))),
         })
 
@@ -113,12 +94,7 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
             await self._notify_friends(online=True)
 
     async def _notify_friends(self, *, online: bool) -> None:
-        """Previent les amis d'un changement de statut.
-
-        La liste d'amis est relue a chaque fois plutot que memorisee a la
-        connexion : une amitie nouee pendant la session doit prendre effet
-        immediatement, sans avoir a recharger la page.
-        """
+        """Previent les amis d'un changement de statut."""
         for friend_id in await _friend_ids(self.user):
             await self.channel_layer.group_send(user_group(friend_id), {
                 "type": "live.presence",
@@ -127,7 +103,6 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
                 "online": online,
             })
 
-    # -- Messages recus depuis le groupe personnel --------------------------
 
     async def live_presence(self, event: dict) -> None:
         await self.send_json({
@@ -146,7 +121,6 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
         await self.send_json({"type": "notification", **payload})
 
 
-# --- Acces base de donnees --------------------------------------------------
 
 @database_sync_to_async
 def _resolve(token) -> tuple[User | None, str | None]:

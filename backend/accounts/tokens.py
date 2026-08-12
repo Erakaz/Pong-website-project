@@ -1,23 +1,4 @@
-"""Jetons de rafraichissement et cookies d'authentification.
-
-Modele de session retenu :
-
-* **access token** — JWT court (15 min), transmis en en-tete `Authorization`,
-  garde uniquement en memoire par le JavaScript. Jamais dans localStorage :
-  une XSS y accederait instantanement ;
-* **refresh token** — chaine aleatoire opaque, stockee cote client dans un
-  cookie `httpOnly` que le JavaScript ne peut pas lire, et cote serveur sous
-  forme de SHA-256 uniquement. Une fuite de la base ne permet donc pas de
-  rejouer les sessions ;
-* **rotation a usage unique** — chaque rafraichissement invalide l'ancien
-  jeton et en emet un nouveau. Si un jeton deja consomme est represente, c'est
-  qu'il a ete vole : toute la chaine de la session est alors revoquee.
-
-Le cookie de refresh etant envoye automatiquement par le navigateur, l'endpoint
-de rafraichissement serait vulnerable au CSRF. Deux protections se cumulent :
-`SameSite=Strict`, et une double soumission (un cookie non-httpOnly renvoye en
-en-tete `X-CSRF-Token`, qu'un site tiers ne peut pas lire donc pas reproduire).
-"""
+"""Jetons de rafraichissement et cookies d'authentification."""
 
 from __future__ import annotations
 
@@ -41,9 +22,6 @@ def _hash(raw: str) -> str:
 
 
 def _cookies_secure() -> bool:
-    # En production le site est en HTTPS et le cookie doit etre `Secure`. En
-    # developpement local en clair, un cookie `Secure` ne serait jamais pose et
-    # la connexion paraitrait cassee sans raison visible.
     return settings.SITE_ORIGIN.startswith("https://")
 
 
@@ -68,9 +46,6 @@ def rotate(raw: str) -> tuple[str, User]:
         raise ApiError("invalid_refresh", "Session inconnue ou expiree.", 401)
 
     if stored.rotated_to_id is not None:
-        # Ce jeton a deja servi. Soit un attaquant rejoue un jeton vole, soit
-        # le veritable proprietaire utilise une copie perimee : dans les deux
-        # cas on coupe tout, l'utilisateur se reconnecte.
         stored.user.revoke_all_tokens()
         raise ApiError("refresh_reused",
                        "Session invalidee pour raison de securite. Reconnecte-toi.", 401)
@@ -108,7 +83,6 @@ def purge_expired() -> int:
     return deleted
 
 
-# --- Cookies ---------------------------------------------------------------
 
 def read_refresh_cookie(request: HttpRequest) -> str:
     raw = request.COOKIES.get(settings.REFRESH_COOKIE_NAME, "")
@@ -118,12 +92,7 @@ def read_refresh_cookie(request: HttpRequest) -> str:
 
 
 def verify_csrf(request: HttpRequest) -> None:
-    """Double soumission : le cookie doit egaler l'en-tete.
-
-    Un site tiers peut declencher la requete (le navigateur joindra le cookie),
-    mais il ne peut pas lire le cookie pour reconstituer l'en-tete : la
-    politique d'origine du navigateur l'en empeche.
-    """
+    """Double soumission : le cookie doit egaler l'en-tete."""
     cookie = request.COOKIES.get(settings.CSRF_COOKIE_NAME, "")
     header = request.headers.get(settings.CSRF_HEADER_NAME, "")
     if not cookie or not header or not secrets.compare_digest(cookie, header):
@@ -137,13 +106,11 @@ def attach_session(response: HttpResponse, raw_refresh: str) -> HttpResponse:
         settings.REFRESH_COOKIE_NAME,
         raw_refresh,
         max_age=settings.JWT_REFRESH_TTL,
-        httponly=True,          # invisible du JavaScript, donc hors de portee d'une XSS
+        httponly=True,
         secure=secure,
-        samesite="Strict",      # jamais envoye depuis un autre site
-        path=REFRESH_PATH,      # seules les routes d'auth le recoivent
+        samesite="Strict",
+        path=REFRESH_PATH,
     )
-    # Temoin lisible par le JS : sert au jeton anti-CSRF et evite d'appeler
-    # l'endpoint de rafraichissement quand aucune session n'existe.
     response.set_cookie(
         settings.CSRF_COOKIE_NAME,
         secrets.token_urlsafe(24),

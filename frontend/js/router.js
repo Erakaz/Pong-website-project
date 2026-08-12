@@ -1,20 +1,8 @@
-/**
- * Routeur SPA base sur l'History API.
- *
- * Le sujet exige que les boutons Precedent et Suivant du navigateur
- * fonctionnent : c'est `pushState` + l'evenement `popstate` qui le
- * garantissent, et nginx renvoie index.html pour toute URL inconnue afin
- * qu'un rechargement direct sur /profile fonctionne aussi.
- *
- * Chaque vue peut retourner une fonction de nettoyage. Le routeur l'appelle
- * AVANT d'afficher la vue suivante : c'est ce qui ferme les WebSockets et
- * arrete les boucles d'animation du jeu, sinon quitter une partie laisserait
- * une socket ouverte et une requestAnimationFrame tournant en fond.
- */
+
 
 import { clear, el } from './dom.js';
 
-/** Transforme "/users/:name" en expression reguliere + liste de parametres. */
+
 function compile(pattern) {
   const params = [];
   const source = pattern
@@ -27,23 +15,17 @@ function compile(pattern) {
 }
 
 export class Router {
-  /**
-   * @param {HTMLElement} outlet noeud dans lequel les vues sont montees
-   */
+
   constructor(outlet) {
     this.outlet = outlet;
     this.routes = [];
     this.notFound = null;
-    this.current = null;      // { cleanup, path }
-    this.renderToken = 0;     // annule le rendu d'une vue devenue obsolete
-    this.onNavigate = null;   // rappel utilise pour surligner le menu actif
+    this.current = null;
+    this.renderToken = 0;
+    this.onNavigate = null;
   }
 
-  /**
-   * @param {string} pattern  "/", "/game/:id"
-   * @param {() => Promise<{default: (ctx) => (Node|Promise<Node>)}>} loader
-   *        import dynamique du module de vue
-   */
+
   register(pattern, loader) {
     this.routes.push({ ...compile(pattern), pattern, loader });
     return this;
@@ -68,8 +50,8 @@ export class Router {
   }
 
   start() {
-    // Interception globale des liens internes : un seul gestionnaire pour
-    // toute l'application, y compris les liens crees dynamiquement.
+
+
     document.addEventListener('click', (event) => {
       if (event.defaultPrevented || event.button !== 0) return;
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -81,8 +63,8 @@ export class Router {
       if (!href || href.startsWith('#')) return;
 
       const url = new URL(href, window.location.origin);
-      if (url.origin !== window.location.origin) return;   // lien externe
-      if (url.pathname.startsWith('/media/')) return;      // fichier servi par nginx
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname.startsWith('/media/')) return;
 
       event.preventDefault();
       this.navigate(url.pathname + url.search);
@@ -107,8 +89,7 @@ export class Router {
     const token = ++this.renderToken;
     const [path, search = ''] = fullPath.split('?');
 
-    // Nettoyage de la vue precedente avant tout : une vue de jeu doit fermer
-    // sa socket meme si le chargement de la suivante echoue.
+
     if (this.current && typeof this.current.cleanup === 'function') {
       try {
         this.current.cleanup();
@@ -132,7 +113,7 @@ export class Router {
     let view;
     try {
       const module = await loader();
-      if (token !== this.renderToken) return;  // une autre navigation a pris le relais
+      if (token !== this.renderToken) return;
       view = await module.default(context);
     } catch (error) {
       if (token !== this.renderToken) return;
@@ -141,7 +122,7 @@ export class Router {
     }
     if (token !== this.renderToken) return;
 
-    // Une vue retourne soit un noeud, soit { node, cleanup }.
+
     const node = view instanceof Node ? view : view.node;
     const cleanup = view instanceof Node ? null : view.cleanup;
 
@@ -151,9 +132,7 @@ export class Router {
 
     if (typeof this.onNavigate === 'function') this.onNavigate(path);
 
-    // Une SPA ne repositionne pas le defilement toute seule, et le focus
-    // resterait sur le lien clique : les deux sont retablis a la main pour
-    // que la navigation au clavier et au lecteur d'ecran reste coherente.
+
     window.scrollTo(0, 0);
     this.outlet.focus({ preventScroll: true });
   }

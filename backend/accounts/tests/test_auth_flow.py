@@ -42,7 +42,6 @@ class RegistrationTest(TestCase):
 
         self.assertEqual(response.status_code, 201)
         self.assertIn("access_token", response.json())
-        # Les deux cookies de session sont poses des l'inscription.
         self.assertIn("ftt_refresh", response.cookies)
         self.assertIn("ftt_csrf", response.cookies)
 
@@ -52,17 +51,14 @@ class RegistrationTest(TestCase):
         }, content_type="application/json")
 
         cookie = response.cookies["ftt_refresh"]
-        # httpOnly : hors de portee du JavaScript, donc d'une XSS.
         self.assertTrue(cookie["httponly"])
         self.assertEqual(cookie["samesite"], "Strict")
-        # Envoye uniquement aux routes d'authentification.
         self.assertEqual(cookie["path"], "/api/auth")
 
     def test_csrf_cookie_stays_readable_by_javascript(self):
         response = self.client.post("/api/auth/register", {
             "display_name": "Ada", "email": "ada@42.lu", "password": PASSWORD,
         }, content_type="application/json")
-        # La double soumission suppose que le JS puisse lire ce cookie.
         self.assertFalse(response.cookies["ftt_csrf"]["httponly"])
 
     def test_password_is_hashed_with_argon2(self):
@@ -153,8 +149,6 @@ class ProtectedRouteTest(TestCase):
         headers = self.auth_header()
         self.assertEqual(self.client.get("/api/me", **headers).status_code, 200)
 
-        # La generation de jetons avance : tout jeton portant l'ancienne est
-        # refuse, sans liste noire a maintenir et sans dependre de l'horloge.
         self.user.revoke_all_tokens()
 
         response = self.client.get("/api/me", **headers)
@@ -170,7 +164,6 @@ class ProtectedRouteTest(TestCase):
         }, content_type="application/json", **headers)
         self.assertEqual(response.status_code, 200)
 
-        # L'ancien jeton est mort, le nouveau fonctionne.
         self.assertEqual(self.client.get("/api/me", **headers).status_code, 401)
         fresh = {"HTTP_AUTHORIZATION": f"Bearer {response.json()['access_token']}"}
         self.assertEqual(self.client.get("/api/me", **fresh).status_code, 200)
@@ -197,7 +190,7 @@ class RefreshRotationTest(TestCase):
         raw = tokens.issue(self.user)
         stored = RefreshToken.objects.get()
         self.assertNotEqual(stored.token_hash, raw)
-        self.assertEqual(len(stored.token_hash), 64)      # SHA-256 en hexadecimal
+        self.assertEqual(len(stored.token_hash), 64)
 
     def test_replaying_a_used_token_kills_the_whole_session(self):
         """Detection de rejeu : un jeton vole ne sert qu'une fois."""
@@ -205,11 +198,9 @@ class RefreshRotationTest(TestCase):
         raw_next, _ = tokens.rotate(raw)
 
         with self.assertRaises(ApiError) as caught:
-            tokens.rotate(raw)                            # rejeu de l'ancien
+            tokens.rotate(raw)
         self.assertEqual(caught.exception.code, "refresh_reused")
 
-        # Y compris le jeton legitime issu de la rotation : toute la chaine
-        # tombe, l'utilisateur devra se reconnecter.
         with self.assertRaises(ApiError):
             tokens.rotate(raw_next)
 
@@ -251,7 +242,6 @@ class AvatarTest(TestCase):
         self.assertTrue(result.read().startswith(b"\x89PNG"))
 
     def test_a_non_image_is_refused(self):
-        # Un script deguise en avatar : Pillow ne le decode pas.
         with self.assertRaises(ApiError):
             process_avatar(Upload(b"<?php system($_GET['c']); ?>"))
 
@@ -272,7 +262,6 @@ class AvatarTest(TestCase):
             self.assertLessEqual(image.width, 512)
 
     def test_exif_metadata_does_not_survive(self):
-        # Une photo de telephone embarque souvent des coordonnees GPS.
         buffer = io.BytesIO()
         source = Image.new("RGB", (64, 64), (10, 20, 30))
         exif = source.getexif()

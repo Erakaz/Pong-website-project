@@ -6,8 +6,6 @@
   <meta name="description" content="Tournois de Pong en ligne — projet ft_transcendence, 42.">
   <title>ft_transcendence</title>
 
-  <!-- Bootstrap est vendorise dans le depot : la CSP interdit toute source
-       externe, et les machines de l'ecole peuvent etre hors ligne. -->
   <link rel="stylesheet" href="/vendor/bootstrap/bootstrap.min.css">
   <link rel="stylesheet" href="/css/app.css">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
@@ -34,7 +32,6 @@
     </div>
   </nav>
 
-  <!-- Cible du routeur : tout le contenu de page est remplace ici. -->
   <main id="app" class="container flex-grow-1 py-4" tabindex="-1"></main>
 
   <footer class="border-top border-secondary-subtle py-3 mt-auto">
@@ -45,8 +42,6 @@
     </div>
   </footer>
 
-  <!-- Region ARIA live : les notifications y sont annoncees aux lecteurs
-       d'ecran sans voler le focus. -->
   <div id="toasts" class="toast-container position-fixed bottom-0 end-0 p-3"
        role="status" aria-live="polite" aria-atomic="true"></div>
 

@@ -1,23 +1,4 @@
-"""WebSocket de partie.
-
-Protocole, cote client :
-
-    {"type": "join",  "token": "<jwt ou null>"}
-    {"type": "input", "side": 0, "dir": -1 | 0 | 1}
-    {"type": "ping"}
-
-Cote serveur :
-
-    {"type": "joined",   "match": {...}, "geometry": {...}, "sides": [0, 1]}
-    {"type": "state",    "state": {...}}          ~30 par seconde
-    {"type": "events",   "events": [...]}         rebonds, points
-    {"type": "opponent", "status": "left" | "back" | "forfeit", ...}
-    {"type": "end",      "state": {...}, "match": {...}}
-    {"type": "error",    "code": "...", "message": "..."}
-
-Le client n'envoie qu'une intention de deplacement. Aucune position, aucune
-vitesse, aucun score : tout cela est calcule et fait autorite cote serveur.
-"""
+"""WebSocket de partie."""
 
 from __future__ import annotations
 
@@ -34,7 +15,6 @@ from game.models import Match
 
 logger = logging.getLogger(__name__)
 
-# Fermetures applicatives : 4000+ est la plage reservee aux applications.
 CLOSE_NOT_FOUND = 4004
 CLOSE_SEAT_TAKEN = 4009
 CLOSE_PROTOCOL = 4002
@@ -46,22 +26,14 @@ class MatchConsumer(AsyncJsonWebsocketConsumer):
         self.room: rooms.MatchRoom | None = None
         self.sides: set[int] = set()
         self.user = None
-        # La socket est acceptee avant toute verification : c'est le message
-        # `join` qui porte le jeton, jamais l'URL. Un jeton en query string se
-        # retrouverait dans les journaux de nginx et l'historique du navigateur.
         await self.accept()
 
     async def disconnect(self, code: int) -> None:
         if self.room is None:
             return
-        # On se contente de liberer la place : c'est la boucle de la partie qui
-        # previendra l'adversaire, au meme instant ou elle met le jeu en pause.
-        # Annoncer le depart d'ici arriverait avant la pause et laisserait un
-        # bref intervalle ou le message et l'etat se contredisent.
         self.room.release(self.channel_name)
         await self.channel_layer.group_discard(self.room.group, self.channel_name)
 
-    # -- Messages entrants --------------------------------------------------
 
     async def receive_json(self, content: dict, **kwargs) -> None:
         if not isinstance(content, dict):
@@ -89,8 +61,6 @@ class MatchConsumer(AsyncJsonWebsocketConsumer):
             return await self.close(code=CLOSE_NOT_FOUND)
 
         if match.state in (Match.STATE_FINISHED, Match.STATE_ABORTED):
-            # On renvoie quand meme le resultat : un lien partage vers une
-            # partie terminee doit afficher le score, pas une erreur.
             await self.send_json({
                 "type": "joined",
                 "match": await _match_dict(match, self.user),
@@ -122,17 +92,11 @@ class MatchConsumer(AsyncJsonWebsocketConsumer):
         })
 
         if returned:
-            # La partie n'etait peut-etre pas encore gelee (retour tres rapide),
-            # mais l'adversaire doit dans tous les cas voir disparaitre son
-            # message d'attente.
             room.resume_if_ready()
             await self.channel_layer.group_send(
                 room.group, {"type": "game.opponent", "status": "back",
                              "side": min(sides) if sides else None})
 
-        # Le premier arrive attend son adversaire sans savoir qui viendra : on
-        # previent tout le monde des qu'une place est prise, pour que l'ecran
-        # d'attente affiche le nom du joueur en face.
         if sides and match.mode == Match.MODE_REMOTE:
             await self.channel_layer.group_send(room.group, {
                 "type": "game.player",
@@ -145,15 +109,13 @@ class MatchConsumer(AsyncJsonWebsocketConsumer):
     def _sides_for(self, match: Match, room: rooms.MatchRoom) -> set[int]:
         """Determine les raquettes que cette socket a le droit de piloter."""
         if match.mode == Match.MODE_LOCAL:
-            # Partie a deux sur un seul clavier : une unique socket pilote les
-            # deux raquettes. Une seconde socket ne peut pas s'inviter.
             if room.occupied_sides:
                 raise ApiError("seat_taken", "Quelqu'un joue deja cette partie.", 409)
             return {engine.LEFT, engine.RIGHT}
 
         side = match.side_of_user(self.user)
         if side is None:
-            return set()          # spectateur : recoit l'etat, n'envoie rien
+            return set()
         if side in room.occupied_sides:
             raise ApiError("seat_taken", "Tu es deja connecte a cette partie ailleurs.", 409)
         return {side}
@@ -168,15 +130,10 @@ class MatchConsumer(AsyncJsonWebsocketConsumer):
             return await self._fail("invalid_input", "Commande de deplacement invalide.")
 
         if not self.room.apply_input(self.channel_name, side, direction):
-            # Tentative de bouger une raquette qui n'est pas la sienne.
             await self._fail("forbidden_side", "Cette raquette ne t'appartient pas.")
 
     async def _authenticate(self, token) -> User | None:
-        """Un jeton absent ou invalide fait simplement un spectateur anonyme.
-
-        On ne coupe pas la socket : une partie locale se joue sans compte, et
-        un lien de match partage doit rester consultable.
-        """
+        """Un jeton absent ou invalide fait simplement un spectateur anonyme."""
         if not token:
             return None
         user, _error = await _resolve(token)
@@ -185,7 +142,6 @@ class MatchConsumer(AsyncJsonWebsocketConsumer):
     async def _fail(self, code: str, message: str) -> None:
         await self.send_json({"type": "error", "code": code, "message": message})
 
-    # -- Messages diffuses par la salle -------------------------------------
 
     async def game_state(self, event: dict) -> None:
         await self.send_json({"type": "state", "state": event["state"]})
@@ -216,14 +172,12 @@ class MatchConsumer(AsyncJsonWebsocketConsumer):
                               "message": "La partie a ete interrompue par une erreur serveur."})
 
 
-# --- Acces base de donnees --------------------------------------------------
 
 @database_sync_to_async
 def _load_match(match_id) -> Match | None:
     try:
         return Match.objects.select_related("player1", "player2", "tournament").get(pk=match_id)
     except (Match.DoesNotExist, ValueError, TypeError):
-        # ValueError couvre un UUID malforme dans l'URL.
         return None
 
 

@@ -1,9 +1,4 @@
-/**
- * Profil d'un joueur — le sien (`/profile`) ou celui d'un autre (`/users/:id`).
- *
- * Une seule vue pour les deux cas : le contenu est identique, seules les
- * actions changent (modifier son compte / ajouter en ami).
- */
+
 
 import { del, get, post } from '../api.js';
 import { el } from '../dom.js';
@@ -32,7 +27,7 @@ export default async function render(context) {
   const { user, stats, history } = profile;
   const statusDot = el('span', { class: 'badge text-bg-secondary' }, '…');
 
-  // Etat initial rapporte par l'API, puis mis a jour en direct par le socket.
+
   if (user.online) seed([user.id]);
 
   const refreshStatus = () => {
@@ -72,7 +67,6 @@ async function loadOwnProfile(me) {
   return { user: { ...me, online: true }, stats: data.stats, history: data.history };
 }
 
-/* --- Statistiques -------------------------------------------------------- */
 
 function statsGrid(stats) {
   const streakLabel = stats.current_streak.count === 0
@@ -113,7 +107,6 @@ function formatDuration(seconds) {
   return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')}`;
 }
 
-/* --- Historique ---------------------------------------------------------- */
 
 function historyTable(history) {
   if (history.length === 0) {
@@ -162,7 +155,6 @@ function historyRow(entry) {
   );
 }
 
-/* --- Bouton d'amitie ----------------------------------------------------- */
 
 function friendButton(profile) {
   const { user, friendship } = profile;

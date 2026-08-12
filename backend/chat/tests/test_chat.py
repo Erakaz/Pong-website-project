@@ -56,9 +56,6 @@ class MessagingTest(ChatTestCase):
             services.send_message(self.ada, self.ada, "salut")
 
     def test_invisible_characters_are_stripped(self):
-        # U+202E inverse le sens de lecture du texte qui suit (de quoi
-        # afficher un message trompeur), et un octet nul casse certains
-        # traitements en aval. Les deux sont retires a la validation.
         payload = "sa" + chr(0x202E) + "lut" + chr(0)
         message = services.send_message(self.ada, self.bob, payload)
         self.assertEqual(message.body, "salut")
@@ -86,8 +83,7 @@ class BlockTest(ChatTestCase):
         self.assertEqual(Message.objects.count(), 0)
 
     def test_blocking_cuts_the_conversation_both_ways(self):
-        """Sinon, celui qui bloque pourrait continuer a ecrire : incoherent, et
-        cela revelerait le blocage a l'autre."""
+        """Sinon, celui qui bloque pourrait continuer a ecrire : incoherent, et"""
         Block.objects.create(blocker=self.ada, blocked=self.bob)
         with self.assertRaises(ApiError):
             services.send_message(self.ada, self.bob, "et moi ?")
@@ -135,7 +131,6 @@ class InviteTest(ChatTestCase):
 
         match = Match.objects.get(pk=payload["match"]["id"])
         self.assertEqual(match.mode, Match.MODE_REMOTE)
-        # Les deux places sont deja attribuees : l'invite n'a rien a chercher.
         self.assertEqual(match.player1_id, self.ada.pk)
         self.assertEqual(match.player2_id, self.bob.pk)
 
@@ -148,8 +143,7 @@ class InviteTest(ChatTestCase):
 
 class TournamentAnnouncementTest(ChatTestCase):
     def test_players_are_warned_of_their_next_match(self):
-        """« The tournament system should be able to warn users expected for
-        the next game. »"""
+        """« The tournament system should be able to warn users expected for"""
         tournament = game_services.create_tournament(
             name="Coupe", mode="remote", points_to_win=3,
             entries=[{"user": self.ada, "alias": "Ada"}, {"user": self.bob, "alias": "Bob"}],
@@ -161,12 +155,11 @@ class TournamentAnnouncementTest(ChatTestCase):
             announcements = Message.objects.filter(recipient=user, kind=Message.KIND_SYSTEM)
             self.assertEqual(announcements.count(), 1, f"aucune annonce pour {user}")
             announcement = announcements.get()
-            self.assertIsNone(announcement.sender_id)     # message du systeme
-            self.assertIsNotNone(announcement.match_id)   # avec le lien vers le match
+            self.assertIsNone(announcement.sender_id)
+            self.assertIsNotNone(announcement.match_id)
 
     def test_an_announcement_reaches_a_blocked_pair_anyway(self):
-        """Un blocage entre joueurs ne doit pas empecher le tournoi de les
-        convoquer : l'annonce vient du systeme, pas de l'adversaire."""
+        """Un blocage entre joueurs ne doit pas empecher le tournoi de les"""
         Block.objects.create(blocker=self.ada, blocked=self.bob)
 
         tournament = game_services.create_tournament(

@@ -1,21 +1,4 @@
-"""JSON Web Tokens (HS256) implementes a la main.
-
-Le module « 2FA + JWT » demande de maitriser l'emission et la validation des
-jetons : deleguer a PyJWT reviendrait a ne rien implementer du module. Le code
-tient en une centaine de lignes et suit la RFC 7519 pour la partie utile
-(en-tete, charge utile, signature detachee en base64url).
-
-Trois garde-fous qui font la difference entre un JWT correct et un JWT
-dangereux :
-
-1. l'algorithme est impose par le serveur, jamais lu depuis l'en-tete du jeton
-   — sinon un attaquant renvoie `{"alg": "none"}` et se signe ses propres
-   jetons (faille historique de plusieurs bibliotheques) ;
-2. la comparaison de signature passe par `hmac.compare_digest`, en temps
-   constant, pour ne pas fuir la signature attendue octet par octet ;
-3. le type de jeton (`typ`) est verifie : un jeton intermediaire de 2FA ne doit
-   jamais etre accepte comme jeton d'acces.
-"""
+"""JSON Web Tokens (HS256) implementes a la main."""
 
 from __future__ import annotations
 
@@ -83,8 +66,6 @@ def decode(token: str, *, expected_type: str) -> dict[str, Any]:
     header_b64, payload_b64, signature_b64 = parts
     signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
 
-    # L'algorithme attendu est celui du serveur. On lit quand meme l'en-tete
-    # pour rejeter explicitement un jeton qui annoncerait autre chose.
     try:
         header = json.loads(_b64url_decode(header_b64))
     except (ValueError, UnicodeDecodeError):
@@ -117,11 +98,7 @@ def decode(token: str, *, expected_type: str) -> dict[str, Any]:
 
 def make_access_token(user_id: int, *, version: int = 0,
                       issued_at: int | None = None) -> tuple[str, int]:
-    """Retourne (jeton, duree de vie en secondes).
-
-    `version` recopie `User.token_version` : c'est ce que le middleware compare
-    pour detecter un jeton revoque.
-    """
+    """Retourne (jeton, duree de vie en secondes)."""
     now = issued_at if issued_at is not None else int(time.time())
     ttl = settings.JWT_ACCESS_TTL
     payload = {
@@ -131,20 +108,13 @@ def make_access_token(user_id: int, *, version: int = 0,
         "ver": version,
         "iat": now,
         "exp": now + ttl,
-        # Identifiant unique : permet de tracer un jeton precis dans les logs
-        # sans y ecrire le jeton lui-meme.
         "jti": secrets.token_urlsafe(8),
     }
     return encode(payload), ttl
 
 
 def make_twofa_token(user_id: int) -> str:
-    """Jeton intermediaire delivre apres le mot de passe, avant le code TOTP.
-
-    Il ne donne acces a rien d'autre qu'a l'endpoint de verification du code :
-    c'est ce qui permet de ne pas garder le mot de passe cote client entre les
-    deux etapes.
-    """
+    """Jeton intermediaire delivre apres le mot de passe, avant le code TOTP."""
     now = int(time.time())
     payload = {
         "iss": settings.JWT_ISSUER,

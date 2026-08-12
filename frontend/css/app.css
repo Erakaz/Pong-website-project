@@ -1,43 +1,27 @@
-/* =============================================================================
-   ft_transcendence — habillage borne d'arcade
-   =============================================================================
 
-   Le sujet impose de garder l'essence du Pong de 1972. L'habillage s'en
-   inspire directement : ecran cathodique noir, phosphore vert, lignes de
-   balayage, aucun angle arrondi, typographie bitmap.
-
-   Bootstrap reste le socle (module « front-end toolkit ») : sa grille, ses
-   composants et ses utilitaires sont utilises tels quels. Seules ses variables
-   CSS sont redefinies ci-dessous — c'est la maniere prevue de le theminer, et
-   cela evite de reecrire ses composants.
-   ========================================================================== */
-
-/* --- Typographie ---------------------------------------------------------- */
 
 @font-face {
   font-family: "Press Start 2P";
   src: url("/vendor/fonts/press-start-2p.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
-  /* `swap` : le texte s'affiche immediatement en police de repli, la bitmap
-     prend le relais des qu'elle est la. Pas d'ecran vide au chargement. */
+
   font-display: swap;
 }
 
 :root {
-  /* La bitmap sert aux titres et aux commandes : superbe en gros, illisible
-     en paragraphe. Le corps de texte reste sur une monospace systeme. */
+
   --ftt-font-display: "Press Start 2P", "Courier New", monospace;
   --ftt-font-body: ui-monospace, "Cascadia Mono", "Consolas", "Courier New", monospace;
 
-  /* --- Palette cathodique --- */
+
   --ftt-black: #05070a;
   --ftt-panel: #0b0f14;
   --ftt-panel-2: #10161d;
   --ftt-line: #1f2a33;
-  --ftt-white: #e6f2ea;        /* blanc phosphore, jamais du blanc pur */
+  --ftt-white: #e6f2ea;
   --ftt-dim: #6f8a7d;
-  --ftt-green: #35f08a;        /* accent principal */
+  --ftt-green: #35f08a;
   --ftt-green-dim: #1d8a52;
   --ftt-amber: #ffc24d;
   --ftt-red: #ff5f56;
@@ -46,7 +30,6 @@
   --ftt-glow-soft: 0 0 10px rgba(53, 240, 138, 0.22);
 }
 
-/* --- Bootstrap, reglé sur la palette ------------------------------------- */
 
 [data-bs-theme="dark"] {
   --bs-body-bg: var(--ftt-black);
@@ -84,7 +67,7 @@
   --bs-card-bg: var(--ftt-panel);
   --bs-card-border-color: var(--ftt-line);
 
-  /* Une borne d'arcade n'a pas d'angles arrondis. */
+
   --bs-border-radius: 0;
   --bs-border-radius-sm: 0;
   --bs-border-radius-lg: 0;
@@ -93,17 +76,15 @@
   --bs-border-radius-pill: 0;
 }
 
-/* --- Ecran ---------------------------------------------------------------- */
 
 body {
   background: var(--ftt-black);
   font-family: var(--ftt-font-body);
-  /* Le lissage sous-pixel brouille les contours nets recherches ici. */
+
   -webkit-font-smoothing: antialiased;
 }
 
-/* Lignes de balayage et vignettage, en surimpression sur toute la page.
-   `pointer-events: none` : la couche ne doit jamais intercepter un clic. */
+
 body::after {
   content: "";
   position: fixed;
@@ -121,7 +102,7 @@ body::after {
     radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
 }
 
-/* Halo vert diffus, comme la remanence d'un tube cathodique. */
+
 body::before {
   content: "";
   position: fixed;
@@ -135,7 +116,6 @@ body::before {
   );
 }
 
-/* --- Titres --------------------------------------------------------------- */
 
 h1, h2, h3, .display-1, .display-4, .display-6, .navbar-brand, .btn, .badge {
   font-family: var(--ftt-font-display);
@@ -151,10 +131,9 @@ h1 { font-size: clamp(1.1rem, 3.4vw, 1.9rem); line-height: 1.5; }
 h2 { font-size: clamp(0.85rem, 2.2vw, 1.15rem); line-height: 1.6; }
 h3 { font-size: clamp(0.7rem, 1.8vw, 0.9rem); line-height: 1.6; }
 
-/* La bitmap n'a pas de gras : un `font-weight` eleve la rendrait floue. */
+
 h1, h2, h3, .btn, .navbar-brand { font-weight: 400; }
 
-/* --- Navigation ----------------------------------------------------------- */
 
 .navbar {
   background: rgba(5, 7, 10, 0.92);
@@ -168,7 +147,7 @@ h1, h2, h3, .btn, .navbar-brand { font-weight: 400; }
   text-shadow: var(--ftt-glow);
 }
 
-/* Balle clignotante du logo, comme le curseur d'un terminal. */
+
 .brand-mark {
   display: inline-block;
   width: 0.5rem;
@@ -205,19 +184,18 @@ h1, h2, h3, .btn, .navbar-brand { font-weight: 400; }
   text-shadow: var(--ftt-glow);
 }
 
-/* --- Commandes ------------------------------------------------------------ */
 
 .btn {
   font-size: 0.62rem;
   padding: 0.7rem 1.15rem;
   border-width: 2px;
-  /* Ombre portee nette, sans flou : un bouton physique, pas un dégradé. */
+
   box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.85);
   transition: transform 0.06s steps(2), box-shadow 0.06s steps(2);
 }
 
 .btn:active {
-  /* Le bouton s'enfonce : le decalage compense exactement l'ombre. */
+
   transform: translate(3px, 3px);
   box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
@@ -261,14 +239,13 @@ h1, h2, h3, .btn, .navbar-brand { font-weight: 400; }
 .btn-sm { font-size: 0.52rem; padding: 0.5rem 0.8rem; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85); }
 .btn-sm:active { transform: translate(2px, 2px); }
 
-/* Contour de focus visible et net, indispensable au clavier. */
+
 :focus-visible {
   outline: 2px solid var(--ftt-green);
   outline-offset: 2px;
   box-shadow: none !important;
 }
 
-/* --- Panneaux ------------------------------------------------------------- */
 
 .card {
   background: linear-gradient(180deg, var(--ftt-panel-2), var(--ftt-panel));
@@ -299,7 +276,6 @@ h1, h2, h3, .btn, .navbar-brand { font-weight: 400; }
   color: var(--ftt-white);
 }
 
-/* --- Formulaires ---------------------------------------------------------- */
 
 .form-control,
 .form-select {
@@ -332,7 +308,6 @@ h1, h2, h3, .btn, .navbar-brand { font-weight: 400; }
 
 .input-group > .form-control { border-right-width: 0; }
 
-/* --- Etiquettes et alertes ------------------------------------------------ */
 
 .badge {
   font-size: 0.5rem;
@@ -358,7 +333,6 @@ h1, h2, h3, .btn, .navbar-brand { font-weight: 400; }
 .alert-warning { border-color: var(--ftt-amber); }
 .alert-info { border-color: var(--ftt-line); }
 
-/* --- Tableaux ------------------------------------------------------------- */
 
 .table {
   --bs-table-bg: transparent;
@@ -375,7 +349,6 @@ h1, h2, h3, .btn, .navbar-brand { font-weight: 400; }
   border-bottom-width: 2px;
 }
 
-/* --- Accessibilite -------------------------------------------------------- */
 
 .skip-link {
   position: absolute;
@@ -396,9 +369,6 @@ footer {
   color: var(--ftt-dim);
 }
 
-/* =============================================================================
-   Terrain de jeu
-   ========================================================================== */
 
 .pong-court {
   display: block;
@@ -411,12 +381,11 @@ footer {
   box-shadow:
     0 0 0 1px rgba(53, 240, 138, 0.15),
     0 0 40px rgba(53, 240, 138, 0.12);
-  /* Le lissage arrondirait les raquettes : on veut des pixels francs. */
+
   image-rendering: pixelated;
   touch-action: none;
 }
 
-/* --- Tableau de score ----------------------------------------------------- */
 
 .scoreboard {
   max-width: 960px;
@@ -447,9 +416,6 @@ footer {
   color: var(--ftt-dim);
 }
 
-/* =============================================================================
-   Page d'accueil
-   ========================================================================== */
 
 .hero {
   position: relative;
@@ -485,7 +451,7 @@ footer {
   line-height: 1.8;
 }
 
-/* Ecran d'attente : la borne joue toute seule quand personne n'est devant. */
+
 .attract-screen {
   position: relative;
   width: 100%;
@@ -517,7 +483,7 @@ footer {
   pointer-events: none;
 }
 
-/* Bandeau de commandes clavier, facon notice de borne. */
+
 .controls-strip {
   display: flex;
   flex-wrap: wrap;
@@ -548,13 +514,7 @@ footer {
   color: var(--ftt-dim);
 }
 
-/* =============================================================================
-   Preferences systeme
-   ========================================================================== */
 
-/* Quelqu'un qui a demande moins d'animations ne doit subir ni clignotement,
-   ni scintillement — c'est un reglage d'accessibilite, pas une preference
-   esthetique. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -568,7 +528,7 @@ footer {
   .attract-caption { animation: none; opacity: 1; }
 }
 
-/* Les lignes de balayage nuisent a la lisibilite en contraste eleve. */
+
 @media (prefers-contrast: more) {
   body::after { display: none; }
   :root { --ftt-dim: #b9cdc3; }

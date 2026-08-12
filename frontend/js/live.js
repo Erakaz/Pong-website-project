@@ -1,11 +1,4 @@
-/**
- * Socket de session (`ws/live`), unique pour tout l'onglet.
- *
- * Ouverte des la connexion et fermee a la deconnexion, elle porte la presence
- * en ligne et les notifications. Les vues s'y abonnent par type de message
- * plutot que d'ouvrir chacune leur socket : une seule connexion par onglet,
- * et une vue qu'on quitte n'interrompt pas la presence.
- */
+
 
 import { getState, subscribe } from './store.js';
 
@@ -14,14 +7,14 @@ const RETRY_MAX = 15000;
 const HEARTBEAT = 25000;
 const CLOSE_NORMAL = 1000;
 
-const listeners = new Map();     // type de message -> Set de rappels
+const listeners = new Map();
 const onlineUsers = new Set();
 
 let socket = null;
 let retryTimer = null;
 let heartbeatTimer = null;
 let attempts = 0;
-let wanted = false;              // l'utilisateur est-il cense etre connecte ?
+let wanted = false;
 
 function url() {
   const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -40,10 +33,7 @@ function emit(type, payload) {
   }
 }
 
-/**
- * @param {string} type  'presence', 'notification', 'status'
- * @returns {() => void} fonction de desabonnement, a appeler au nettoyage de la vue
- */
+
 export function on(type, listener) {
   if (!listeners.has(type)) listeners.set(type, new Set());
   listeners.get(type).add(listener);
@@ -54,15 +44,7 @@ export function isOnline(userId) {
   return onlineUsers.has(userId);
 }
 
-/**
- * Injecte l'etat en ligne rapporte par une reponse HTTP.
- *
- * Deux cas l'exigent : la page peut s'afficher avant que le message `ready` du
- * socket n'arrive, et une recherche de joueurs renvoie des personnes qui ne
- * sont pas encore des amis — donc dont le socket ne signalera jamais le
- * statut. Une fois seme, `isOnline()` reste la seule source consultee, sinon
- * un passage hors ligne ne serait jamais pris en compte.
- */
+
 export function seed(userIds) {
   for (const id of userIds) onlineUsers.add(id);
 }
@@ -149,10 +131,7 @@ function close() {
   onlineUsers.clear();
 }
 
-/**
- * Branche la socket sur l'etat de session : elle s'ouvre a la connexion et se
- * ferme a la deconnexion, sans qu'aucune vue n'ait a s'en occuper.
- */
+
 export function bindToSession() {
   subscribe((state) => {
     const authenticated = Boolean(state.user && state.accessToken);

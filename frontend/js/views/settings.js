@@ -1,9 +1,4 @@
-/**
- * Reglages du compte : identite, avatar, mot de passe, sessions.
- *
- * La double authentification et les options RGPD viennent s'ajouter ici aux
- * phases suivantes ; la structure en cartes independantes est prevue pour ca.
- */
+
 
 import { api, post } from '../api.js';
 import { el } from '../dom.js';
@@ -34,7 +29,6 @@ export default function render(context) {
   );
 }
 
-/* --- Double authentification --------------------------------------------- */
 
 function twofaCard() {
   const body = el('div', {});
@@ -124,8 +118,7 @@ async function setupView(setup, done) {
     style: { 'min-height': '13rem' },
   });
 
-  // Le QR est dessine dans le navigateur a partir de l'URI recue : le secret
-  // n'est jamais envoye a un generateur de QR tiers.
+
   import('../qr.js')
     .then(({ renderQr }) => renderQr(setup.otpauth_uri))
     .then((svg) => qrHolder.replaceChildren(svg))
@@ -174,7 +167,7 @@ async function setupView(setup, done) {
 }
 
 function showBackupCodes(codes) {
-  // Seule occasion de les voir : ils ne sont stockes que haches cote serveur.
+
   const dialog = el('div', {
     class: 'alert alert-warning position-fixed top-50 start-50 translate-middle shadow-lg',
     role: 'alertdialog',
@@ -195,7 +188,6 @@ function showBackupCodes(codes) {
   document.body.appendChild(dialog);
 }
 
-/* --- Compte 42 ------------------------------------------------------------ */
 
 function oauth42Card() {
   const { user, features } = getState();
@@ -217,8 +209,8 @@ function oauth42Card() {
       onClick: async (event) => {
         event.currentTarget.disabled = true;
         try {
-          // Route authentifiee : c'est elle qui lie le parcours OAuth a ce
-          // compte precis, sans faire confiance a un parametre d'URL.
+
+
           const data = await post('/api/me/oauth42/link', {});
           window.location.assign(data.authorize_url);
         } catch (error) {
@@ -230,14 +222,11 @@ function oauth42Card() {
   );
 }
 
-/* --- Identite ------------------------------------------------------------ */
 
 function identityCard() {
   const { user } = getState();
 
-  // Les cles portent exactement les noms de champs renvoyes par le serveur en
-  // cas d'erreur : `applyFormError` peut ainsi poser le message sur le bon
-  // champ sans table de correspondance.
+
   const fields = {
     display_name: field('display_name', 'Pseudo', {
       value: user.display_name, maxlength: 24, autocomplete: 'nickname',
@@ -277,7 +266,6 @@ function identityCard() {
   return card('Identite', form);
 }
 
-/* --- Avatar -------------------------------------------------------------- */
 
 function avatarCard() {
   const { user } = getState();
@@ -293,8 +281,7 @@ function avatarCard() {
     const file = input.files && input.files[0];
     if (!file) return;
 
-    // Apercu immediat avec une URL blob : la CSP autorise `blob:` en source
-    // d'image precisement pour ce cas.
+
     const objectUrl = URL.createObjectURL(file);
     preview.src = objectUrl;
 
@@ -343,7 +330,6 @@ function avatarCard() {
   );
 }
 
-/* --- Mot de passe -------------------------------------------------------- */
 
 function passwordCard() {
   const { user } = getState();
@@ -395,7 +381,6 @@ function passwordCard() {
   return card('Mot de passe', form);
 }
 
-/* --- Sessions ------------------------------------------------------------ */
 
 function sessionsCard(context) {
   return card('Sessions',
@@ -410,8 +395,8 @@ function sessionsCard(context) {
         try {
           await post('/api/auth/logout-all', {}, { csrf: true });
         } catch {
-          // Meme si l'appel echoue, on deconnecte localement : l'utilisateur
-          // ne doit jamais rester coince sur un ecran connecte.
+
+
         }
         clearSession();
         context.router.navigate('/');

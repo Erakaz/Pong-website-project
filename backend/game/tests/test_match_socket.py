@@ -1,9 +1,4 @@
-"""Tests de la WebSocket de partie : autorisations, deconnexion, forfait.
-
-Ces tests pilotent le vrai consumer avec un communicateur Channels, ce qui
-couvre le chemin complet — routage, authentification, salle, boucle asyncio —
-sans navigateur.
-"""
+"""Tests de la WebSocket de partie : autorisations, deconnexion, forfait."""
 
 import asyncio
 
@@ -101,7 +96,6 @@ class RemoteMatchSocketTest(TransactionTestCase):
         self.assertEqual((await wait_for(bob, "joined"))["sides"], [0])
         self.assertEqual((await wait_for(cyd, "joined"))["sides"], [1])
 
-        # Bob tente de bouger la raquette de Cyd.
         await bob.send_json_to({"type": "input", "side": 1, "dir": -1})
         error = await wait_for(bob, "error")
         self.assertEqual(error["code"], "forbidden_side")
@@ -117,7 +111,6 @@ class RemoteMatchSocketTest(TransactionTestCase):
         communicator = await connect(self.match.id, self.token(intruder))
         joined = await wait_for(communicator, "joined")
 
-        # Aucune raquette : il regarde, il ne joue pas.
         self.assertEqual(joined["sides"], [])
         await communicator.send_json_to({"type": "input", "side": 0, "dir": -1})
         self.assertEqual((await wait_for(communicator, "error"))["code"], "forbidden_side")
@@ -154,8 +147,6 @@ class RemoteMatchSocketTest(TransactionTestCase):
         message = await wait_for(bob, "opponent")
         self.assertEqual(message["status"], "left")
         self.assertEqual(message["side"], 1)
-        # La partie est gelee : celui qui reste ne doit pas marquer pendant que
-        # son adversaire tente de revenir.
         self.assertEqual(rooms.registry.get(self.match.id).engine.status, "paused")
 
         await bob.disconnect()
@@ -177,8 +168,6 @@ class RemoteMatchSocketTest(TransactionTestCase):
 
         back = await wait_for(bob, "opponent")
         self.assertEqual(back["status"], "back")
-        # On reprend par un decompte, jamais balle en jeu : celui qui revient
-        # doit avoir le temps de se replacer.
         self.assertEqual(rooms.registry.get(self.match.id).engine.status, "countdown")
 
         await bob.disconnect()
@@ -187,7 +176,7 @@ class RemoteMatchSocketTest(TransactionTestCase):
 
     async def test_a_player_who_never_comes_back_loses_by_forfeit(self):
         original = rooms.DISCONNECT_GRACE
-        rooms.DISCONNECT_GRACE = 0.3          # le test ne va pas attendre 20 s
+        rooms.DISCONNECT_GRACE = 0.3
         try:
             bob = await connect(self.match.id, self.token(self.bob))
             cyd = await connect(self.match.id, self.token(self.cyd))
@@ -200,7 +189,6 @@ class RemoteMatchSocketTest(TransactionTestCase):
             end = await wait_for(bob, "end", limit=200)
             self.assertEqual(end["state"]["winner"], 0)
 
-            # Laisse la boucle finir d'ecrire en base.
             await asyncio.sleep(0.3)
             match = await database_sync_to_async(Match.objects.get)(pk=self.match.id)
             self.assertEqual(match.state, Match.STATE_FINISHED)

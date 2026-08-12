@@ -1,25 +1,20 @@
-# --- Secrets : NE JAMAIS committer (echec immediat du projet) ---
 .env
 *.pem
 *.key
 nginx/certs/
 
-# --- Python ---
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
 venv/
 
-# --- Django ---
 backend/media/
 backend/staticfiles/
 db.sqlite3
 
-# --- Outils locaux (hors projet) ---
 .claude/
 
-# --- Divers ---
 *.log
 .DS_Store
 Thumbs.db

@@ -1,10 +1,4 @@
-/**
- * Choix du mode de jeu.
- *
- * Couvre la partie obligatoire du sujet : une partie a deux sur le meme
- * clavier, et un tournoi ou chaque joueur saisit son alias au demarrage.
- * Aucun compte n'est necessaire.
- */
+
 
 import { post } from '../api.js';
 import { el } from '../dom.js';
@@ -27,9 +21,6 @@ export default function render(context) {
   return node;
 }
 
-/* ------------------------------------------------------------------------ */
-/*  Partie locale                                                            */
-/* ------------------------------------------------------------------------ */
 
 function localMatchForm(context) {
   const { user } = getState();
@@ -83,9 +74,6 @@ function localMatchForm(context) {
   return card('Partie a deux, meme clavier', form);
 }
 
-/* ------------------------------------------------------------------------ */
-/*  Tournoi local                                                            */
-/* ------------------------------------------------------------------------ */
 
 function tournamentForm(context) {
   const { user } = getState();
@@ -175,15 +163,13 @@ function tournamentForm(context) {
     submit,
   );
 
-  // Le sujet impose la saisie des alias a l'ouverture du tournoi : quatre
-  // champs sont prets, l'organisateur en ajoute ou en retire.
+
   addAlias(user ? user.display_name : 'Joueur 1');
   for (let index = 2; index <= 4; index += 1) addAlias(`Joueur ${index}`);
 
   return card('Tournoi local', form);
 }
 
-/* ------------------------------------------------------------------------ */
 
 function pointsSelect(id) {
   const select = el('select', { id, class: 'form-select' },

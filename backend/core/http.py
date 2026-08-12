@@ -1,12 +1,4 @@
-"""Briques communes des vues JSON.
-
-Le projet n'utilise pas Django REST Framework : DRF est une bibliotheque tierce
-qui n'appartient pas a Django officiel, et le sujet demande de justifier chaque
-dependance. Ces quelques helpers couvrent tout ce dont l'API a besoin, avec un
-controle total sur la validation — ce qui est precisement ce que le sujet exige
-(« implement some form of validation for forms and any user input [...] on the
-server side »).
-"""
+"""Briques communes des vues JSON."""
 
 from __future__ import annotations
 
@@ -16,8 +8,6 @@ from typing import Any, Callable, Iterable
 
 from django.http import HttpRequest, HttpResponse, JsonResponse
 
-# Taille maximale d'un corps JSON. Les avatars passent par du multipart, pas
-# par ce chemin : 64 Kio suffisent largement et bornent la consommation memoire.
 MAX_JSON_BYTES = 64 * 1024
 
 
@@ -52,11 +42,7 @@ def json_error(
     status: int = 400,
     details: dict[str, Any] | None = None,
 ) -> JsonResponse:
-    """Forme d'erreur unique pour toute l'API.
-
-    Le frontend n'a ainsi qu'un seul format a interpreter, et `code` reste
-    stable meme si `message` est reformule ou traduit.
-    """
+    """Forme d'erreur unique pour toute l'API."""
     payload: dict[str, Any] = {"error": {"code": code, "message": message}}
     if details:
         payload["error"]["details"] = details
@@ -80,11 +66,7 @@ def read_json(request: HttpRequest, *, max_bytes: int = MAX_JSON_BYTES) -> dict[
 
 
 def require_methods(*methods: str) -> Callable:
-    """Restreint une vue a une liste de verbes HTTP.
-
-    Equivalent de `django.views.decorators.http.require_http_methods`, mais qui
-    repond en JSON plutot qu'en HTML.
-    """
+    """Restreint une vue a une liste de verbes HTTP."""
     allowed = {m.upper() for m in methods}
     if "OPTIONS" not in allowed:
         allowed.add("OPTIONS")
@@ -112,20 +94,12 @@ def require_methods(*methods: str) -> Callable:
 
 
 def login_required(view: Callable[..., HttpResponse]) -> Callable[..., HttpResponse]:
-    """Refuse l'acces si JWTAuthenticationMiddleware n'a authentifie personne.
-
-    Le sujet insiste : « if you opt to create an API, ensure your routes are
-    protected ». Toute route non publique porte ce decorateur.
-    """
+    """Refuse l'acces si JWTAuthenticationMiddleware n'a authentifie personne."""
 
     @functools.wraps(view)
     def wrapper(request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         user = getattr(request, "user", None)
         if user is None or not getattr(user, "is_authenticated", False):
-            # JWTAuthenticationMiddleware renseigne `auth_error` en resolvant
-            # l'utilisateur. Distinguer `token_expired` du reste permet au
-            # frontend de tenter un rafraichissement silencieux plutot que de
-            # deconnecter l'utilisateur au moindre jeton perime.
             code = getattr(request, "auth_error", None) or "unauthorized"
             message = ("Jeton expire." if code == "token_expired"
                        else "Authentification requise.")

@@ -1,11 +1,4 @@
-"""Authentification par jeton porteur (Bearer) sur les requetes HTTP.
-
-Ce middleware n'interdit rien par lui-meme : il se contente de renseigner
-`request.user`. C'est le decorateur `core.http.login_required` qui refuse
-l'acces, route par route. Separer les deux evite le piege classique du
-« middleware qui protege tout sauf la liste d'exceptions qu'on a oublie de
-mettre a jour ».
-"""
+"""Authentification par jeton porteur (Bearer) sur les requetes HTTP."""
 
 from __future__ import annotations
 
@@ -43,8 +36,6 @@ class JWTAuthenticationMiddleware:
                 request.auth_error = error
             return resolved["user"]
 
-        # Chargement paresseux : les routes publiques (health, login, inscription)
-        # ne declenchent aucune requete SQL supplementaire.
         request.auth_error = None
         request.user = SimpleLazyObject(load)
         return self.get_response(request)

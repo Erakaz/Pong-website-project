@@ -1,10 +1,4 @@
-/**
- * Page « Donnees et vie privee ».
- *
- * Le module RGPD demande une communication claire sur les droits des
- * utilisateurs, et des moyens accessibles de les exercer : tout est reuni ici,
- * le texte comme les boutons.
- */
+
 
 import { api, get, post } from '../api.js';
 import { el } from '../dom.js';
@@ -72,8 +66,8 @@ function actionsCard(context) {
       + 'definitives : elles ne peuvent pas etre annulees.'),
 
     el('div', { class: 'd-grid gap-2' },
-      // Lien direct plutot que fetch : le navigateur gere le telechargement,
-      // et le fichier n'a jamais besoin de transiter par la memoire du script.
+
+
       el('a', {
         class: 'btn btn-outline-primary',
         href: '/api/me/data',

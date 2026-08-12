@@ -1,17 +1,6 @@
-/**
- * Ecran d'attente de la page d'accueil.
- *
- * Les bornes d'arcade jouaient toutes seules quand personne n'etait devant :
- * c'est l'« attract mode », destine a montrer le jeu aux passants. Cette
- * animation en reprend le principe.
- *
- * Elle est purement decorative et tourne dans le navigateur. Ce n'est PAS le
- * jeu : la vraie partie est simulee par le serveur (game/engine.py), le client
- * n'y calcule aucune physique. Les deux ne partagent aucun code, et ce qui est
- * dessine ici n'a aucune consequence.
- */
 
-const W = 320;              // resolution interne, volontairement basse
+
+const W = 320;
 const H = 160;
 const PADDLE_W = 5;
 const PADDLE_H = 34;
@@ -34,9 +23,7 @@ export function startAttract(canvas) {
   let frame = null;
   let previous = performance.now();
 
-  // Chaque raquette suit la balle avec un retard et une vitesse plafonnee :
-  // elles se manquent de temps en temps, ce qui fait vivre l'echange. Une
-  // poursuite parfaite donnerait un match figé, sans aucun point marque.
+
   const track = (current, target, speed, dt) => {
     const delta = target - current;
     const step = Math.max(-speed * dt, Math.min(speed * dt, delta));
@@ -80,7 +67,7 @@ export function startAttract(canvas) {
     if (ball.x < -BALL) { state.scores[1] += 1; reset(1); }
     if (ball.x > W + BALL) { state.scores[0] += 1; reset(-1); }
 
-    // Les scores restent a un chiffre : au-dela, l'affichage deborderait.
+
     if (state.scores[0] > 9 || state.scores[1] > 9) state.scores = [0, 0];
   };
 
@@ -120,8 +107,7 @@ export function startAttract(canvas) {
     frame = window.requestAnimationFrame(loop);
   };
 
-  // Reglage « reduire les animations » : on dessine une image fixe et on
-  // s'arrete la.
+
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     draw();
     return () => {};

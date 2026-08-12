@@ -1,22 +1,13 @@
-/**
- * Etat de session, en memoire uniquement.
- *
- * Choix de securite : l'access token n'est JAMAIS ecrit dans localStorage ni
- * sessionStorage. Ces deux stockages sont lisibles par n'importe quel script
- * de la page, donc par une XSS. Ici le jeton vit dans une variable de module :
- * il disparait au rechargement de l'onglet, et c'est le refresh token — dans
- * un cookie httpOnly, hors de portee du JavaScript — qui permet de retrouver
- * une session au demarrage.
- */
+
 
 const listeners = new Set();
 
 const state = {
   accessToken: null,
-  accessExpiresAt: 0,   // horodatage local (ms) d'expiration estimee
-  user: null,           // objet utilisateur prive, ou null si deconnecte
-  features: {},         // drapeaux renvoyes par /api/health (ex. oauth42)
-  ready: false,         // true une fois la session initiale resolue
+  accessExpiresAt: 0,
+  user: null,
+  features: {},
+  ready: false,
 };
 
 export function getState() {
@@ -56,7 +47,7 @@ export function setReady(value) {
   notify();
 }
 
-/** S'abonner aux changements de session (navbar, vues, socket de presence). */
+
 export function subscribe(listener) {
   listeners.add(listener);
   return () => listeners.delete(listener);

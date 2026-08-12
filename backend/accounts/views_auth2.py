@@ -1,8 +1,4 @@
-"""Double authentification (TOTP) et connexion 42.
-
-Separe de `accounts/views.py` pour garder chaque fichier lisible : ici, tout ce
-qui touche aux deux modules majeurs « 2FA + JWT » et « Remote authentication ».
-"""
+"""Double authentification (TOTP) et connexion 42."""
 
 from __future__ import annotations
 
@@ -19,24 +15,14 @@ from core.http import (ApiError, json_ok, login_required, read_json,
                        require_methods)
 from core.validation import clean_text, field_str, validate_display_name
 
-# Reutilise la construction de session des vues d'authentification.
 from accounts.views import _session_payload
 
 
-# ---------------------------------------------------------------------------
-#  Double authentification
-# ---------------------------------------------------------------------------
 
 @require_methods("POST")
 @login_required
 def twofa_setup(request):
-    """Prepare l'activation : genere un secret, sans encore l'activer.
-
-    Le secret est enregistre mais `totp_enabled` reste faux tant que
-    l'utilisateur n'a pas prouve, avec un premier code, que son application le
-    lit correctement. Sans cette etape, une erreur de scan enfermerait le
-    compte dehors.
-    """
+    """Prepare l'activation : genere un secret, sans encore l'activer."""
     user = request.user
     if user.totp_enabled:
         raise ApiError("already_enabled", "La double authentification est deja active.", 409)
@@ -78,13 +64,10 @@ def twofa_enable(request):
         BackupCode.objects.bulk_create(
             [BackupCode(user=user, code_hash=totp.hash_backup_code(code)) for code in codes],
         )
-        # Activer la 2FA doit fermer les sessions ouvertes ailleurs : elles ont
-        # ete obtenues sans second facteur.
         user.revoke_all_tokens()
 
     response = json_ok({
         "user": user.private_dict(),
-        # Seule et unique fois ou les codes circulent en clair.
         "backup_codes": codes,
         **_session_payload(user),
     })
@@ -100,8 +83,6 @@ def twofa_disable(request):
     if not user.totp_enabled:
         raise ApiError("not_enabled", "La double authentification n'est pas active.", 409)
 
-    # Desactiver un facteur de securite exige de prouver son identite : sinon
-    # un onglet laisse ouvert suffirait a le retirer.
     if user.has_usable_password():
         password = data.get("password")
         if not isinstance(password, str) or not user.check_password(password):
@@ -123,12 +104,7 @@ def twofa_disable(request):
 
 @require_methods("POST")
 def twofa_verify(request):
-    """Seconde etape de la connexion : le code a usage unique.
-
-    Le jeton intermediaire delivre par `/api/auth/login` ne donne acces qu'a
-    cette route : ni le mot de passe ni une session complete ne transitent
-    entre les deux etapes.
-    """
+    """Seconde etape de la connexion : le code a usage unique."""
     data = read_json(request)
 
     token = field_str(data, "twofa_token", max_len=2048, clean=False)
@@ -176,17 +152,12 @@ def twofa_status(request):
     return json_ok({"enabled": request.user.totp_enabled, "backup_codes_left": remaining})
 
 
-# ---------------------------------------------------------------------------
-#  Connexion 42
-# ---------------------------------------------------------------------------
 
 def _state_cookie_kwargs() -> dict:
     return {
         "max_age": oauth42.STATE_TTL,
         "httponly": True,
         "secure": settings.SITE_ORIGIN.startswith("https://"),
-        # `Lax` et non `Strict` : le cookie doit survivre au retour de
-        # navigation depuis l'intra, qui est un autre site.
         "samesite": "Lax",
         "path": "/api/auth",
     }
@@ -206,12 +177,7 @@ def oauth42_login(request):
 @require_methods("POST")
 @login_required
 def oauth42_link_start(request):
-    """Prepare la liaison d'un compte 42 a un compte existant.
-
-    Cette route est authentifiee : c'est elle qui inscrit l'identifiant de
-    l'utilisateur dans le `state`, si bien que le callback sait a quel compte
-    rattacher le profil 42 sans faire confiance a un parametre d'URL.
-    """
+    """Prepare la liaison d'un compte 42 a un compte existant."""
     oauth42.ensure_enabled()
 
     if request.user.oauth42_id:
@@ -225,13 +191,7 @@ def oauth42_link_start(request):
 
 @require_methods("GET")
 def oauth42_callback(request):
-    """Retour de l'intra. Termine en redirigeant vers la SPA.
-
-    Le navigateur arrive ici par navigation, pas par `fetch` : la reponse est
-    donc une redirection, et la session est transmise par cookie. L'access
-    token n'apparait jamais dans une URL, ou il finirait dans l'historique du
-    navigateur et dans les journaux du proxy.
-    """
+    """Retour de l'intra. Termine en redirigeant vers la SPA."""
     oauth42.ensure_enabled()
 
     expected = request.COOKIES.get(oauth42.STATE_COOKIE, "")
@@ -240,7 +200,6 @@ def oauth42_callback(request):
     if request.GET.get("error"):
         return _finish("/login?oauth=denied")
     if not expected or not received or expected != received:
-        # Etat absent ou different : requete forgee, ou parcours trop ancien.
         return _finish("/login?oauth=state")
 
     code = request.GET.get("code", "")
@@ -264,8 +223,6 @@ def oauth42_callback(request):
     user.last_seen = timezone.now()
     user.save(update_fields=["last_seen"])
 
-    # La SPA detectera le cookie temoin au demarrage et recuperera son access
-    # token par un rafraichissement normal.
     response = _finish("/?oauth=ok")
     response.delete_cookie(oauth42.STATE_COOKIE, path="/api/auth", samesite="Lax")
     return tokens.attach_session(response, tokens.issue(user))
@@ -277,20 +234,11 @@ def _finish(path: str) -> HttpResponseRedirect:
 
 @transaction.atomic
 def _login_or_create(profile: dict) -> User:
-    """Connecte le titulaire du compte 42, ou en cree un.
-
-    Politique de doublons, a justifier en soutenance : l'identifiant numerique
-    42 est l'ancre. Si l'e-mail 42 correspond deja a un compte cree par mot de
-    passe, la connexion est REFUSEE et l'utilisateur doit lier son compte 42
-    depuis ses reglages, une fois authentifie. Creer la liaison ici
-    reviendrait a offrir n'importe quel compte a qui controle l'adresse
-    e-mail associee.
-    """
+    """Connecte le titulaire du compte 42, ou en cree un."""
     existing = User.objects.filter(oauth42_id=profile["id"]).first()
     if existing is not None:
         if not existing.is_active:
             raise ApiError("account_disabled", "Ce compte est desactive.", 403)
-        # Le login 42 peut avoir change entre deux connexions.
         if existing.oauth42_login != profile["login"]:
             existing.oauth42_login = profile["login"]
             existing.save(update_fields=["oauth42_login"])
@@ -304,7 +252,7 @@ def _login_or_create(profile: dict) -> User:
     user = User.objects.create_user(
         email=profile["email"] or None,
         display_name=_available_display_name(profile["login"]),
-        password=None,                       # compte sans mot de passe utilisable
+        password=None,
         oauth42_id=profile["id"],
         oauth42_login=profile["login"],
     )
@@ -330,12 +278,7 @@ def _link_profile(user_id: int, profile: dict) -> User:
 
 
 def _available_display_name(login: str) -> str:
-    """Derive un pseudo libre a partir du login 42.
-
-    Les logins 42 sont uniques chez eux mais peuvent entrer en collision avec
-    un pseudo choisi librement sur le site : on suffixe alors, plutot que
-    d'echouer l'inscription.
-    """
+    """Derive un pseudo libre a partir du login 42."""
     base = re.sub(r"[^\w.\-]", "", clean_text(login)) or "joueur"
     base = base[:20]
     while len(base) < 3:

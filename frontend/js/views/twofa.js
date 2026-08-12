@@ -1,11 +1,4 @@
-/**
- * Seconde etape de la connexion : le code a usage unique.
- *
- * On arrive ici avec un jeton intermediaire de 5 minutes, place en
- * sessionStorage par la vue de connexion. Ce jeton n'ouvre aucune route de
- * l'API : il ne sert qu'a prouver, a cet endpoint precis, que le mot de passe
- * a bien ete verifie juste avant.
- */
+
 
 import { post } from '../api.js';
 import { el } from '../dom.js';

@@ -1,17 +1,4 @@
-"""Matchs et tournois persistes.
-
-Un joueur est represente de deux facons possibles, et c'est volontaire :
-
-* `playerN` (cle etrangere vers un compte) quand la personne est inscrite ;
-* `playerN_alias` (texte) sinon.
-
-La partie obligatoire du sujet doit fonctionner **sans aucun compte** : un
-tournoi local se joue avec de simples alias saisis au demarrage. Le module
-« Standard user management » vient ensuite enrichir ce meme modele, sans le
-remplacer — un match de tournoi peut donc opposer un invite a un inscrit. Pour
-l'historique et les statistiques, seules les lignes portant une cle etrangere
-comptent, ce qui evite d'attribuer des victoires a un alias usurpe.
-"""
+"""Matchs et tournois persistes."""
 
 from __future__ import annotations
 
@@ -26,15 +13,12 @@ from game import engine
 
 
 class Match(models.Model):
-    MODE_LOCAL = "local"      # deux joueurs sur le meme clavier
-    MODE_REMOTE = "remote"    # deux joueurs sur deux machines
+    MODE_LOCAL = "local"
+    MODE_REMOTE = "remote"
     MODE_CHOICES = [(MODE_LOCAL, "Local"), (MODE_REMOTE, "A distance")]
 
-    # Un match de tournoi existe des la creation du tableau, bien avant de
-    # connaitre ses joueurs : c'est ce qui permet d'afficher le bracket complet
-    # (« qui joue contre qui et l'ordre des joueurs ») des le depart.
-    STATE_PENDING = "pending"      # attend les qualifies du tour precedent
-    STATE_LOBBY = "lobby"          # joueurs connus, partie pas encore lancee
+    STATE_PENDING = "pending"
+    STATE_LOBBY = "lobby"
     STATE_RUNNING = "running"
     STATE_FINISHED = "finished"
     STATE_ABORTED = "aborted"
@@ -49,16 +33,11 @@ class Match(models.Model):
     LEFT = engine.LEFT
     RIGHT = engine.RIGHT
 
-    # UUID plutot qu'un entier auto-incremente : l'identifiant d'un match
-    # circule dans les URL et les invitations de chat. Un entier permettrait de
-    # parcourir toutes les parties du site en incrementant un compteur.
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     mode = models.CharField(max_length=8, choices=MODE_CHOICES, default=MODE_LOCAL)
     state = models.CharField(max_length=10, choices=STATE_CHOICES, default=STATE_LOBBY)
     points_to_win = models.PositiveSmallIntegerField(default=engine.DEFAULT_POINTS_TO_WIN)
-    # Graine du generateur du moteur : rend la partie reproductible a
-    # l'identique, ce qui aide au debogage d'un comportement signale.
     seed = models.BigIntegerField(default=0)
 
     player1 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
@@ -71,7 +50,6 @@ class Match(models.Model):
     score1 = models.PositiveSmallIntegerField(default=0)
     score2 = models.PositiveSmallIntegerField(default=0)
     winner_side = models.PositiveSmallIntegerField(null=True, blank=True)
-    # Renseigne quand la victoire vient d'une deconnexion et non du score.
     by_forfeit = models.BooleanField(default=False)
 
     tournament = models.ForeignKey("game.Tournament", on_delete=models.CASCADE,
@@ -86,11 +64,6 @@ class Match(models.Model):
     duration_seconds = models.FloatField(default=0.0)
     total_hits = models.PositiveIntegerField(default=0)
     longest_rally = models.PositiveIntegerField(default=0)
-    # Chronologie des points : [{"t": seconde, "side": 0|1, "rally": n}, ...].
-    # C'est la matiere du tableau de bord de partie (module « Dashboards »),
-    # qui demande « detailed statistics, outcomes, and historical data for each
-    # match ». Une liste de quelques dizaines d'entiers par match : bien plus
-    # leger qu'une table dediee, et toujours lue en bloc.
     points_log = models.JSONField(default=list, blank=True)
 
     class Meta:
@@ -107,22 +80,15 @@ class Match(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.seed:
-            # 62 bits : tient dans un BigIntegerField signe de PostgreSQL.
             self.seed = secrets.randbits(62)
         super().save(*args, **kwargs)
 
-    # -- Acces aux joueurs --------------------------------------------------
 
     def user_of(self, side: int):
         return self.player1 if side == self.LEFT else self.player2
 
     def alias_of(self, side: int) -> str:
-        """Nom affiche pour ce cote.
-
-        L'alias fige au moment du match prime sur le pseudo actuel du compte :
-        l'historique doit montrer sous quel nom la personne a reellement joue,
-        meme si elle se renomme ensuite ou fait anonymiser son compte (RGPD).
-        """
+        """Nom affiche pour ce cote."""
         stored = self.player1_alias if side == self.LEFT else self.player2_alias
         if stored:
             return stored
@@ -157,7 +123,6 @@ class Match(models.Model):
         if self.state == self.STATE_PENDING and self.is_ready:
             self.state = self.STATE_LOBBY
 
-    # -- Cycle de vie -------------------------------------------------------
 
     def mark_started(self) -> None:
         self.state = self.STATE_RUNNING
@@ -182,7 +147,6 @@ class Match(models.Model):
             "points_log",
         ])
 
-    # -- Serialisation ------------------------------------------------------
 
     def to_dict(self, *, viewer=None) -> dict:
         return {
@@ -266,8 +230,6 @@ class Tournament(models.Model):
             "size": self.size,
             "points_to_win": self.points_to_win,
             "rounds_count": self.rounds_count,
-            # Sert au frontend a n'afficher le bouton de lancement qu'a
-            # l'organisateur ; la vraie verification reste cote serveur.
             "created_by_id": self.created_by_id,
             "created_at": self.created_at.isoformat(),
             "winner": self.winner.to_dict() if self.winner_id else None,
@@ -279,11 +241,7 @@ class Tournament(models.Model):
         return data
 
     def bracket_dict(self, *, viewer=None) -> list[dict]:
-        """Le bracket, tour par tour.
-
-        Le sujet impose d'afficher clairement « qui joue contre qui et l'ordre
-        des joueurs » : c'est exactement ce que cette structure alimente.
-        """
+        """Le bracket, tour par tour."""
         rounds: list[dict] = []
         matches = list(self.matches.select_related("player1", "player2")
                        .order_by("round_index", "slot_index"))
@@ -310,12 +268,7 @@ class Tournament(models.Model):
 
 
 class TournamentPlayer(models.Model):
-    """Un participant : soit un compte, soit un simple alias.
-
-    Le sujet demande qu'a l'ouverture d'un tournoi chaque joueur saisisse son
-    alias, et que les alias soient reinitialises au tournoi suivant. C'est
-    naturel ici : les alias appartiennent au tournoi et disparaissent avec lui.
-    """
+    """Un participant : soit un compte, soit un simple alias."""
 
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="players")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
@@ -329,9 +282,6 @@ class TournamentPlayer(models.Model):
         db_table = "game_tournament_player"
         ordering = ["seed_index", "joined_at"]
         constraints = [
-            # Deux « Bob » dans le meme tournoi rendraient le bracket
-            # indechiffrable — et c'est exactement ce que le sujet veut eviter
-            # en demandant un alias par joueur.
             models.UniqueConstraint(fields=["tournament", "alias"],
                                     name="unique_alias_per_tournament"),
             models.UniqueConstraint(fields=["tournament", "user"],

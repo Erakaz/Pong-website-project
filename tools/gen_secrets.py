@@ -1,20 +1,11 @@
 #!/usr/bin/env python3
-"""Remplace les valeurs `change-me...` d'un fichier .env par des secrets forts.
-
-Usage:  python3 tools/gen_secrets.py [.env]
-
-Les secrets sont tires de `secrets.token_urlsafe`, qui s'appuie sur le CSPRNG
-du systeme d'exploitation. Le script est idempotent : il ne touche qu'aux
-lignes dont la valeur commence par `change-me`, donc le relancer ne regenere
-pas des secrets deja definis.
-"""
+"""Remplace les valeurs `change-me...` d'un fichier .env par des secrets forts."""
 
 import re
 import secrets
 import sys
 from pathlib import Path
 
-# Longueur (en octets d'entropie) de chaque secret genere.
 ENTROPY_BYTES = {
     "DJANGO_SECRET_KEY": 48,
     "JWT_SECRET": 48,
@@ -38,8 +29,6 @@ def main(argv: list[str]) -> int:
         match = LINE_RE.match(line)
         if not match:
             continue
-        # `split('#')` casserait un mot de passe contenant un '#'; on ne
-        # commente jamais en fin de ligne de secret, donc un strip suffit.
         value = match["value"].strip()
         if not value.startswith("change-me"):
             continue

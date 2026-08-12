@@ -1,8 +1,4 @@
-"""API de la messagerie : historique, blocages, invitations.
-
-L'envoi en temps reel passe par le socket de session (`ws/live`) ; ces routes
-servent au chargement initial et aux actions ponctuelles.
-"""
+"""API de la messagerie : historique, blocages, invitations."""
 
 from __future__ import annotations
 
@@ -66,11 +62,7 @@ def block(request, user_id):
 @require_methods("POST")
 @login_required
 def invite(request, user_id):
-    """Invite quelqu'un a jouer, depuis la conversation.
-
-    La partie est creee tout de suite : l'invitation porte un lien direct, et
-    l'invite n'a rien a chercher dans le salon.
-    """
+    """Invite quelqu'un a jouer, depuis la conversation."""
     other = _get_user(user_id)
     if services.is_blocked(request.user, other):
         raise ApiError("not_delivered", "Cette invitation n'a pas pu etre envoyee.", 403)
@@ -90,13 +82,7 @@ def invite(request, user_id):
 
 
 def _deliver(message: Message) -> None:
-    """Pousse le message dans les boites aux lettres temps reel concernees.
-
-    Les DEUX cotes sont servis, pas seulement le destinataire : l'expediteur
-    peut avoir plusieurs onglets ouverts, et celui d'ou part le message doit
-    l'afficher comme les autres. C'est aussi le comportement du chemin
-    WebSocket, les deux restent ainsi interchangeables.
-    """
+    """Pousse le message dans les boites aux lettres temps reel concernees."""
     from asgiref.sync import async_to_sync
     from channels.layers import get_channel_layer
 

@@ -11,9 +11,6 @@ PASSWORD = "Correct-Horse-42"
 class RateLimitTest(TestCase):
     def setUp(self):
         User.objects.create_user(email="ada@42.lu", display_name="Ada", password=PASSWORD)
-        # Les compteurs sont un etat partage, en memoire ou dans Redis selon ce
-        # qui est disponible : chaque cas doit repartir de zero, sans quoi les
-        # tests se bloquent mutuellement des que Redis est joignable.
         ratelimit.reset()
         self.addCleanup(ratelimit.reset)
 
@@ -44,7 +41,6 @@ class RateLimitTest(TestCase):
         for _ in range(3):
             self.login("mauvais", ip="203.0.113.7")
         self.assertEqual(self.login("mauvais", ip="203.0.113.7").status_code, 429)
-        # Un autre visiteur ne doit pas subir le blocage du premier.
         self.assertNotEqual(self.login("mauvais", ip="198.51.100.4").status_code, 429)
 
     @override_settings(RATE_LIMITS={})
@@ -56,7 +52,6 @@ class RateLimitTest(TestCase):
     def test_other_routes_are_not_affected(self):
         for _ in range(3):
             self.login("mauvais")
-        # /api/health n'est pas dans les seaux surveilles.
         self.assertEqual(self.client.get("/api/health").status_code, 200)
 
 

@@ -1,11 +1,4 @@
-"""Annonces du systeme de tournoi.
-
-Le sujet l'exige explicitement dans le module « Live chat » : « the tournament
-system should be able to warn users expected for the next game ». L'annonce
-emprunte donc le meme canal que les messages directs — un message de type
-`system` depose dans la boite aux lettres de chaque joueur concerne, puis
-pousse en temps reel s'il est connecte.
-"""
+"""Annonces du systeme de tournoi."""
 
 from __future__ import annotations
 
@@ -26,15 +19,13 @@ def announce_next_match(match: Match) -> None:
     for side, other_side in opponents.items():
         user = match.user_of(side)
         if user is None:
-            continue          # joueur non inscrit : rien a notifier
+            continue
         body = (f"C'est a toi de jouer : {match.alias_of(side)} contre "
                 f"{match.alias_of(other_side)}.")
         try:
             message = chat_services.notify(user, body, match=match)
             _push(user.pk, message)
         except Exception:
-            # Une notification perdue ne doit jamais faire echouer la
-            # progression du tournoi, qui elle est deja enregistree.
             logger.exception("Annonce du prochain match impossible pour %s", user.pk)
 
 

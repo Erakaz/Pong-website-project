@@ -1,15 +1,4 @@
-/**
- * Point d'entree de la SPA.
- *
- * Sequence de demarrage :
- *   1. interroger /api/health pour connaitre les modules actifs (OAuth 42) ;
- *   2. tenter de restaurer la session via le cookie de refresh httpOnly ;
- *   3. demarrer le routeur sur l'URL courante.
- *
- * Les etapes 1 et 2 peuvent echouer sans consequence (serveur qui demarre,
- * aucune session) : elles sont capturees, jamais laissees en rejet non gere,
- * car le sujet exige zero erreur en console.
- */
+
 
 import { api, hasSessionCookie, refreshSession } from './api.js';
 import { clear, el } from './dom.js';
@@ -18,9 +7,6 @@ import { Router } from './router.js';
 import { clearSession, getState, setFeatures, setReady, subscribe } from './store.js';
 import { avatar, toast } from './ui.js';
 
-/* -------------------------------------------------------------------------
- *  Definition des routes
- * ---------------------------------------------------------------------- */
 
 const router = new Router(document.getElementById('app'));
 
@@ -45,12 +31,7 @@ router
   .register('/diagnostic', () => import('./views/diagnostic.js'))
   .setNotFound(() => import('./views/notfound.js'));
 
-/* -------------------------------------------------------------------------
- *  Barre de navigation
- * ---------------------------------------------------------------------- */
 
-// `auth: true` = visible seulement connecte, `false` = seulement deconnecte,
-// `null` = toujours visible.
 const NAV_LINKS = [
   { href: '/', label: 'Accueil', auth: null },
   { href: '/play', label: 'Jouer', auth: null },
@@ -126,8 +107,8 @@ async function doLogout() {
   try {
     await api('/api/auth/logout', { method: 'POST', csrf: true, auth: false });
   } catch {
-    // Meme si le serveur ne repond pas, la session locale doit disparaitre :
-    // rester affiche comme connecte serait pire que tout.
+
+
   }
   clearSession();
   toast('Tu es deconnecte.', 'secondary');
@@ -137,9 +118,6 @@ async function doLogout() {
 router.onNavigate = renderNav;
 subscribe(() => renderNav(window.location.pathname));
 
-/* -------------------------------------------------------------------------
- *  Etat du serveur, affiche en pied de page
- * ---------------------------------------------------------------------- */
 
 async function probeServer() {
   const footer = document.getElementById('footer-status');
@@ -158,34 +136,30 @@ async function probeServer() {
   }
 }
 
-/** Restaure la session si le cookie de refresh est encore valide. */
+
 async function restoreSession() {
   try {
-    // Aucun temoin de session : inutile d'interroger le serveur, et cela
-    // evite un 401 que Chrome afficherait en rouge dans la console.
+
+
     if (hasSessionCookie()) await refreshSession();
   } catch {
-    // Session expiree ou revoquee : on repart simplement deconnecte.
+
   } finally {
     setReady(true);
   }
 }
 
-/* -------------------------------------------------------------------------
- *  Demarrage
- * ---------------------------------------------------------------------- */
 
 async function boot() {
-  // La socket de session s'ouvre et se ferme toute seule en suivant l'etat
-  // d'authentification ; aucune vue n'a a s'en preoccuper.
+
+
   bindToSession();
 
   await Promise.all([probeServer(), restoreSession()]);
   await router.start();
 }
 
-// Un rejet non capture s'afficherait en rouge dans la console : on les
-// intercepte pour les journaliser proprement, sans jamais masquer un vrai bug.
+
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Promesse rejetee sans gestionnaire :', event.reason);
 });
