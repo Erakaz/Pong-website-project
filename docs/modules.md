@@ -1,122 +1,87 @@
-# Couverture du sujet, exigence par exigence
+# Couverture du sujet
 
-Sujet ft_transcendence version 15. Pour chaque point, ou le verifier dans le
-code et comment le constater a l'ecran.
-
----
+Sujet ft_transcendence version 15.
 
 ## Partie obligatoire
 
-| Exigence du sujet | Ou c'est fait | Comment le verifier |
-|---|---|---|
-| Site de tournois Pong | tout le projet | `https://localhost:8443` |
-| Partie en direct contre un autre joueur, **meme clavier** | `frontend/js/game/input.js`, `game/engine.py` | *Jouer* → *Partie a deux, meme clavier*. W/S et ↑/↓ |
-| Tournoi a plusieurs joueurs, chacun son tour | `game/bracket.py`, `game/services.py` | *Jouer* → *Tournoi local* |
-| Affichage clair de qui joue contre qui, et de l'ordre | `frontend/js/views/tournament.js` | Le tableau complet, tour par tour, des l'ouverture |
-| Saisie des alias au demarrage, remis a zero au tournoi suivant | `TournamentPlayer`, `_parse_aliases` | Les alias appartiennent au tournoi et disparaissent avec lui |
-| Systeme de matchmaking annoncant le prochain combat | `Tournament.next_match`, `game/notifications.py` | Bandeau « Prochaine rencontre » + message systeme dans le chat |
-| Regles identiques pour tous, **meme vitesse de raquette** | `engine.PADDLE_SPEED` | Constante unique. Test : `test_both_paddles_move_at_the_same_speed` |
-| Essence du Pong de 1972 | `frontend/js/game/renderer.js` | Balle carree, filet en pointilles, score en gros chiffres |
-| Application monopage, Precedent / Suivant fonctionnels | `frontend/js/router.js` + `try_files` nginx | Naviguer puis utiliser les fleches du navigateur |
-| Dernier Chrome stable | — | Teste sur Chrome |
-| Aucune erreur, aucun avertissement en console | voir `docs/decisions.md` §5 | Ouvrir la console et parcourir le site |
-| Lancement en une seule commande | `docker-compose.yml` | `docker compose up --build` |
-| Mots de passe haches | `PASSWORD_HASHERS` (Argon2id) | Test : `test_password_is_hashed_with_argon2` |
-| Protection SQLi / XSS | ORM seul ; `js/dom.js` ; CSP | `docs/decisions.md` §4 |
-| HTTPS et WSS partout | `nginx/nginx.conf` | Page *Diagnostic* |
-| Validation de toutes les entrees, cote serveur | `core/validation.py` | Tests de validation des formulaires |
-| Routes API protegees | `core.http.login_required` | Tests `..._route_is_protected` |
-| Secrets dans `.env`, ignore par git | `.env.example`, `.gitignore` | `git status` ne montre jamais `.env` |
+| Exigence | Ou elle est traitee |
+|---|---|
+| Partie en direct, deux joueurs, meme clavier | `frontend/js/game/input.js`, `backend/game/engine.py` |
+| Tournoi a plusieurs joueurs | `backend/game/bracket.py`, `backend/game/services.py` |
+| Affichage des rencontres et de leur ordre | `frontend/js/views/tournament.js` |
+| Alias saisis au demarrage, remis a zero ensuite | modele `TournamentPlayer` |
+| Matchmaking et annonce du prochain match | `Tournament.next_match`, `backend/game/notifications.py` |
+| Vitesse de raquette identique pour tous | constante `PADDLE_SPEED` |
+| Essence du Pong de 1972 | `frontend/js/game/renderer.js` |
+| Application monopage, Precedent et Suivant | `frontend/js/router.js` |
+| Aucune erreur en console | voir docs/decisions.md |
+| Lancement en une commande | `docker-compose.yml` |
+| Mots de passe haches | Argon2id |
+| Protection contre les injections SQL et XSS | ORM Django, `js/dom.js`, politique CSP |
+| HTTPS et WSS | `nginx/nginx.conf` |
+| Validation de toutes les entrees | `backend/core/validation.py` |
+| Routes protegees | decorateur `login_required` |
+| Secrets hors du depot | `.gitignore` |
 
----
+## Modules
 
-## Modules — 7 majeurs + 4 mineurs = 9 majeurs equivalents
+Sept majeurs et quatre mineurs, soit neuf majeurs equivalents. Le seuil pour
+100 % est de sept.
 
 ### Web
 
-**Majeur — Framework backend (Django).**
-`backend/` en entier. Django 5 en ASGI, servi par Daphne.
+**Framework backend, Django.** Tout le dossier `backend/`.
 
-**Mineur — Toolkit frontend (Bootstrap).**
-`frontend/vendor/bootstrap/`, vendorise. Toute l'interface s'appuie dessus ;
-`css/app.css` ne fait qu'ajouter l'identite Pong.
+**Toolkit frontend, Bootstrap.** Vendorise dans `frontend/vendor/bootstrap/`.
+Seules ses variables CSS sont redefinies.
 
-**Mineur — Base de donnees (PostgreSQL).**
-`docker-compose.yml`, `config/settings.py`. Seule base du projet.
+**Base de donnees, PostgreSQL.** Unique base du projet.
 
 ### User Management
 
-**Majeur — Gestion des utilisateurs et authentification.**
-`accounts/views.py`, `accounts/models.py`.
-Inscription et connexion securisees, pseudo unique, modification du profil,
-avatar avec valeur par defaut, amis et statut en ligne, statistiques de
-victoires et defaites, historique des matchs date. Politique de doublons
-justifiee dans `docs/decisions.md` §3.
+**Gestion des utilisateurs et authentification.** Inscription, connexion,
+pseudo unique, modification du profil, avatar, amis avec statut en ligne,
+statistiques et historique des matchs. La politique de doublons est justifiee
+dans docs/decisions.md.
 
-**Majeur — Authentification distante (OAuth 2.0 avec 42).**
-`accounts/oauth42.py`, `accounts/views_auth2.py`.
-Flux complet avec `state`, echange serveur a serveur, creation ou liaison de
-compte. **Inactif tant que `.env` ne contient pas les credentials** : le bouton
-est masque et les routes repondent 503.
+**Authentification distante avec 42.** Flux OAuth complet dans
+`accounts/oauth42.py`. Le module reste inactif tant que les identifiants ne
+sont pas renseignes : le bouton est masque et les routes repondent 503.
 
-### Gameplay and user experience
+### Gameplay
 
-**Majeur — Joueurs distants.**
-`game/rooms.py`, `game/consumers.py`, `frontend/js/game/net.js`.
-Deux machines, une partie. Interpolation, prediction locale, pause a la
-deconnexion, reconnexion, forfait apres 20 secondes. Tests :
-`game/tests/test_match_socket.py`.
+**Joueurs distants.** `game/rooms.py`, `game/consumers.py`,
+`frontend/js/game/net.js`. Interpolation, prediction locale, pause a la
+deconnexion, reconnexion, forfait.
 
-**Majeur — Messagerie en direct.**
-`chat/`, `accounts/consumers.py`, `frontend/js/views/chat.js`.
-Messages directs, blocage applique cote serveur, invitation a jouer depuis la
-conversation, annonces du systeme de tournoi, acces au profil depuis le fil.
+**Messagerie en direct.** Messages directs, blocage applique par le serveur,
+invitation a jouer, annonces du systeme de tournoi, acces au profil depuis la
+conversation.
 
 ### AI-Algo
 
-**Mineur — Tableaux de bord.**
-`game/stats.py`, `frontend/js/charts.js`, vues `dashboard` et `match`.
-Tableau de bord joueur (bilan, evolution, face a face) et tableau de bord de
-partie (deroule du score point par point). Graphiques SVG ecrits a la main,
-toujours doubles des chiffres en toutes lettres.
+**Tableaux de bord.** `game/stats.py` et `frontend/js/charts.js`. Un tableau
+par joueur et un par partie. Les graphiques sont en SVG ecrit a la main, et les
+memes chiffres sont toujours disponibles en texte.
 
-> Le module *AI Opponent* n'est volontairement pas realise. Le moteur
-> autoritatif laisse une couture propre pour l'ajouter : un « joueur » IA qui
-> pousse des inputs a 1 Hz dans la boucle, sans rien changer d'autre.
+Le module d'adversaire automatique n'est pas realise.
 
 ### Cybersecurity
 
-**Majeur — Double authentification et JWT.**
-`accounts/jwt_utils.py`, `accounts/totp.py`, `accounts/views_auth2.py`.
-JWT HS256 et TOTP RFC 6238 ecrits a la main. Codes de secours a usage unique.
-Connexion en deux temps. Tests contre les vecteurs officiels de la RFC.
+**Double authentification et JWT.** JWT et TOTP ecrits a la main, codes de
+secours a usage unique, connexion en deux etapes. Les tests verifient
+l'implementation TOTP contre les vecteurs de la RFC 6238.
 
-**Mineur — Conformite RGPD.**
-`accounts/gdpr.py`, `accounts/views_gdpr.py`, page `/privacy`.
-Export JSON complet, anonymisation, suppression definitive, information claire
-sur les droits.
+**Conformite RGPD.** Export des donnees, anonymisation, suppression definitive,
+page d'information.
 
 ### Server-Side Pong
 
-**Majeur — Pong cote serveur et API.**
-`game/engine.py`, `game/rooms.py`, `game/views.py`.
-Toute la physique est sur le serveur. L'API expose les ressources du jeu et
-permet d'y jouer sans navigateur :
+**Pong cote serveur et API.** La physique est entierement sur le serveur.
+L'API permet de jouer sans navigateur :
 
-```bash
+```
 curl -k https://localhost:8443/api/games/<id>/state
 curl -k -X POST https://localhost:8443/api/games/<id>/input \
      -H 'Content-Type: application/json' -d '{"side":0,"dir":-1}'
 ```
-
----
-
-## Recapitulatif
-
-| Poids | Nombre | Equivalent majeur |
-|---|---|---|
-| Modules majeurs | 7 | 7 |
-| Modules mineurs | 4 | 2 |
-| **Total** | | **9** |
-
-Seuil requis pour 100 % : **7 majeurs**.
