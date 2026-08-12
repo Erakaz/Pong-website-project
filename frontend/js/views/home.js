@@ -10,28 +10,6 @@ import { startAttract } from '../attract.js';
 import { el } from '../dom.js';
 import { isAuthenticated } from '../store.js';
 
-const FEATURES = [
-  {
-    index: '01',
-    title: 'Tournois',
-    text: 'Elimination directe, de 2 a 16 joueurs. Le tableau affiche qui '
-      + 'affronte qui, dans quel ordre, et annonce la rencontre suivante.',
-  },
-  {
-    index: '02',
-    title: 'En ligne',
-    text: 'Affronte quelqu’un sur une autre machine. La partie est simulee par '
-      + 'le serveur : personne ne peut tricher, et une coupure reseau ne fait '
-      + 'pas perdre le match.',
-  },
-  {
-    index: '03',
-    title: 'Statistiques',
-    text: 'Victoires, series, points marques, plus long echange. Chaque partie '
-      + 'garde le detail de son deroule, point par point.',
-  },
-];
-
 export default function render() {
   const canvas = el('canvas', {
     'aria-hidden': 'true',      // decoratif : rien a annoncer a un lecteur d'ecran
@@ -62,19 +40,8 @@ export default function render() {
       ),
     ),
 
-    /* --- Ce que le site propose ----------------------------------------- */
-    el('section', { class: 'row g-4 mt-1' },
-      FEATURES.map((feature) => el('div', { class: 'col-12 col-md-4' },
-        el('article', { class: 'feature' },
-          el('span', { class: 'feature-index' }, feature.index),
-          el('h2', {}, feature.title),
-          el('p', {}, feature.text),
-        ),
-      )),
-    ),
-
     /* --- Commandes ------------------------------------------------------- */
-    el('section', { class: 'mt-5' },
+    el('section', { class: 'mt-4' },
       el('h2', { class: 'text-center mb-4' }, 'Commandes'),
       el('div', { class: 'controls-strip' },
         el('div', { class: 'text-center' },

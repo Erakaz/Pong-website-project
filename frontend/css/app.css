@@ -517,38 +517,6 @@ footer {
   pointer-events: none;
 }
 
-/* Bloc de presentation d'une fonctionnalite. */
-.feature {
-  height: 100%;
-  padding: 1.6rem 1.35rem;
-  background: var(--ftt-panel);
-  border: 2px solid var(--ftt-line);
-}
-
-.feature:hover { border-color: rgba(53, 240, 138, 0.45); }
-
-.feature-index {
-  font-family: var(--ftt-font-display);
-  font-size: 0.6rem;
-  color: var(--ftt-green);
-  text-shadow: var(--ftt-glow-soft);
-  display: block;
-  margin-bottom: 0.9rem;
-}
-
-.feature h2 {
-  font-size: 0.68rem;
-  color: var(--ftt-white);
-  margin-bottom: 0.75rem;
-}
-
-.feature p {
-  color: var(--ftt-dim);
-  font-size: 0.85rem;
-  line-height: 1.75;
-  margin: 0;
-}
-
 /* Bandeau de commandes clavier, facon notice de borne. */
 .controls-strip {
   display: flex;
