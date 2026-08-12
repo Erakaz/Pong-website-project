@@ -15,13 +15,18 @@
 const INTERP_DELAY = 100;   // ms
 const BUFFER_MAX = 40;      // ~1,3 s d'historique, largement suffisant
 
+/* Memes teintes que le reste du site (css/app.css) : noir cathodique,
+   phosphore blanc pour les raquettes, vert pour la balle. */
 const COLORS = {
-  court: '#05070b',
-  line: '#1d2635',
-  paddle: '#e8ecf3',
-  ball: '#7bdcb5',
-  score: '#39485e',
+  court: '#000000',
+  line: '#1f2a33',
+  paddle: '#e6f2ea',
+  ball: '#35f08a',
+  score: '#2b3b45',
+  scoreFlash: '#35f08a',
 };
+
+const FONT = '"Press Start 2P", "Courier New", monospace';
 
 function lerp(from, to, ratio) {
   return from + (to - from) * ratio;
@@ -222,47 +227,67 @@ export class PongRenderer {
   }
 
   drawScores(context, scores) {
-    context.fillStyle = this.flash > 0 ? COLORS.ball : COLORS.score;
-    context.font = 'bold 72px "Courier New", monospace';
+    const flashing = this.flash > 0;
+    context.fillStyle = flashing ? COLORS.scoreFlash : COLORS.score;
+    context.font = `56px ${FONT}`;
     context.textBaseline = 'top';
+    // Le score s'illumine brievement quand un point tombe : sur une borne, la
+    // remanence du phosphore produisait le meme effet.
+    context.shadowColor = COLORS.ball;
+    context.shadowBlur = flashing ? 22 : 0;
 
     context.textAlign = 'right';
-    context.fillText(String(scores[0]), this.width / 2 - 40, 28);
+    context.fillText(String(scores[0]), this.width / 2 - 44, 30);
     context.textAlign = 'left';
-    context.fillText(String(scores[1]), this.width / 2 + 40, 28);
+    context.fillText(String(scores[1]), this.width / 2 + 44, 30);
+
+    context.shadowBlur = 0;
   }
 
   drawPaddles(context, paddles) {
-    context.fillStyle = COLORS.paddle;
     const top = (y) => y - this.paddleH / 2;
+    context.fillStyle = COLORS.paddle;
+    context.shadowColor = COLORS.paddle;
+    context.shadowBlur = 12;
     context.fillRect(this.margin, top(paddles[0]), this.paddleW, this.paddleH);
     context.fillRect(this.width - this.margin - this.paddleW, top(paddles[1]),
       this.paddleW, this.paddleH);
+    context.shadowBlur = 0;
   }
 
   drawBall(context, ball) {
     // Balle carree : c'est ainsi qu'elle apparaissait sur le Pong de 1972.
     const size = this.ballRadius * 2;
     context.fillStyle = COLORS.ball;
+    context.shadowColor = COLORS.ball;
+    context.shadowBlur = 16;
     context.fillRect(ball[0] - this.ballRadius, ball[1] - this.ballRadius, size, size);
+    context.shadowBlur = 0;
   }
 
   drawCountdown(context, timer) {
     const seconds = Math.max(1, Math.ceil(timer));
     context.fillStyle = COLORS.paddle;
-    context.font = 'bold 96px "Courier New", monospace';
+    context.font = `72px ${FONT}`;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
+    context.shadowColor = COLORS.ball;
+    context.shadowBlur = 24;
     context.fillText(String(seconds), this.width / 2, this.height / 2);
+    context.shadowBlur = 0;
   }
 
   drawBanner(context, message) {
-    context.fillStyle = 'rgba(5, 7, 11, 0.72)';
-    context.fillRect(0, this.height / 2 - 50, this.width, 100);
+    context.fillStyle = 'rgba(0, 0, 0, 0.78)';
+    context.fillRect(0, this.height / 2 - 46, this.width, 92);
+    context.fillStyle = COLORS.line;
+    context.fillRect(0, this.height / 2 - 46, this.width, 3);
+    context.fillRect(0, this.height / 2 + 43, this.width, 3);
+
     context.fillStyle = COLORS.paddle;
-    context.font = 'bold 40px "Courier New", monospace';
+    context.font = `22px ${FONT}`;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    context.fillText(message, this.width / 2, this.height / 2);
+    context.fillText(message.toUpperCase(), this.width / 2, this.height / 2);
   }
 }

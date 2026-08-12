@@ -1,72 +1,98 @@
-import { el } from '../dom.js';
-import { getState } from '../store.js';
-import { card, pageHeader } from '../ui.js';
+/**
+ * Page d'accueil.
+ *
+ * Une borne d'arcade : le titre, l'ecran d'attente qui joue tout seul, et
+ * l'invitation a lancer une partie. Rien d'autre — l'etat d'avancement du
+ * projet n'a pas sa place ici, il est dans docs/.
+ */
 
-/** Etat d'avancement du projet, affiche sur l'accueil pendant le developpement. */
-const MODULES = [
-  { weight: 'Majeur', label: 'Django en backend' },
-  { weight: 'Majeur', label: 'Comptes, profils, amis, historique' },
-  { weight: 'Majeur', label: 'Connexion 42 (OAuth 2.0)' },
-  { weight: 'Majeur', label: 'Parties entre joueurs distants' },
-  { weight: 'Majeur', label: 'Messagerie directe et invitations' },
-  { weight: 'Majeur', label: 'Double authentification et JWT' },
-  { weight: 'Majeur', label: 'Pong cote serveur et API' },
-  { weight: 'Mineur', label: 'Toolkit Bootstrap' },
-  { weight: 'Mineur', label: 'Base PostgreSQL' },
-  { weight: 'Mineur', label: 'Tableaux de bord statistiques' },
-  { weight: 'Mineur', label: 'Conformite RGPD' },
+import { startAttract } from '../attract.js';
+import { el } from '../dom.js';
+import { isAuthenticated } from '../store.js';
+
+const FEATURES = [
+  {
+    index: '01',
+    title: 'Tournois',
+    text: 'Elimination directe, de 2 a 16 joueurs. Le tableau affiche qui '
+      + 'affronte qui, dans quel ordre, et annonce la rencontre suivante.',
+  },
+  {
+    index: '02',
+    title: 'En ligne',
+    text: 'Affronte quelqu’un sur une autre machine. La partie est simulee par '
+      + 'le serveur : personne ne peut tricher, et une coupure reseau ne fait '
+      + 'pas perdre le match.',
+  },
+  {
+    index: '03',
+    title: 'Statistiques',
+    text: 'Victoires, series, points marques, plus long echange. Chaque partie '
+      + 'garde le detail de son deroule, point par point.',
+  },
 ];
 
 export default function render() {
-  const { features } = getState();
+  const canvas = el('canvas', {
+    'aria-hidden': 'true',      // decoratif : rien a annoncer a un lecteur d'ecran
+  });
 
   const node = el('div', {},
-    pageHeader('Pong', {
-      subtitle: 'Le tournoi de Pong de 42. Affronte un adversaire au clavier, '
-        + 'ou en ligne quand le module sera en place.',
-      actions: [
-        el('a', { class: 'btn btn-primary', href: '/play' }, 'Jouer maintenant'),
-        el('a', { class: 'btn btn-outline-secondary', href: '/diagnostic' },
-          'Verifier la connexion'),
-      ],
-    }),
+    /* --- Banniere ------------------------------------------------------- */
+    el('section', { class: 'hero' },
+      el('p', { class: 'hero-tagline' }, '42 · depuis 1972'),
+      el('h1', { class: 'hero-title' }, 'PONG'),
+      el('p', { class: 'hero-lead' },
+        'Deux raquettes, une balle, aucune excuse. Joue a deux sur le meme '
+        + 'clavier, monte un tournoi, ou affronte quelqu’un a l’autre bout du '
+        + 'reseau.'),
 
-    el('div', { class: 'row g-4' },
-      el('div', { class: 'col-12 col-lg-7' },
-        card('Modules realises',
-          el('p', { class: 'form-text mt-0' },
-            '7 modules majeurs et 4 mineurs, soit 9 majeurs equivalents '
-            + '(7 requis pour 100 %).'),
-          el('ul', { class: 'list-unstyled mb-0' },
-            MODULES.map((module) => el('li', {
-              class: 'd-flex gap-2 align-items-center mb-2',
-            },
-              el('span', {
-                class: `badge text-bg-${module.weight === 'Majeur' ? 'primary' : 'secondary'}`,
-              }, module.weight),
-              el('span', {}, module.label),
-            )),
-          ),
-        ),
+      el('div', { class: 'attract-screen' },
+        canvas,
+        el('p', { class: 'attract-caption' }, 'demonstration'),
       ),
 
-      el('div', { class: 'col-12 col-lg-5' },
-        card('Modules actifs',
-          el('dl', { class: 'row mb-0' },
-            el('dt', { class: 'col-7' }, 'Connexion 42 (OAuth)'),
-            el('dd', { class: 'col-5 text-end' },
-              el('span', {
-                class: `badge text-bg-${features.oauth42 ? 'success' : 'secondary'}`,
-              }, features.oauth42 ? 'configuree' : 'non configuree'),
-            ),
-          ),
-          el('p', { class: 'form-text mb-0 mt-3' },
-            'La connexion 42 s’active en renseignant OAUTH42_UID et '
-            + 'OAUTH42_SECRET dans le fichier .env.'),
+      el('div', { class: 'd-flex flex-wrap justify-content-center gap-3' },
+        el('a', { class: 'btn btn-primary btn-lg', href: '/play' }, 'Jouer'),
+        isAuthenticated()
+          ? el('a', { class: 'btn btn-outline-light btn-lg', href: '/online' },
+            'En ligne')
+          : el('a', { class: 'btn btn-outline-light btn-lg', href: '/register' },
+            'Creer un compte'),
+      ),
+    ),
+
+    /* --- Ce que le site propose ----------------------------------------- */
+    el('section', { class: 'row g-4 mt-1' },
+      FEATURES.map((feature) => el('div', { class: 'col-12 col-md-4' },
+        el('article', { class: 'feature' },
+          el('span', { class: 'feature-index' }, feature.index),
+          el('h2', {}, feature.title),
+          el('p', {}, feature.text),
+        ),
+      )),
+    ),
+
+    /* --- Commandes ------------------------------------------------------- */
+    el('section', { class: 'mt-5' },
+      el('h2', { class: 'text-center mb-4' }, 'Commandes'),
+      el('div', { class: 'controls-strip' },
+        el('div', { class: 'text-center' },
+          el('span', { class: 'control-key' }, 'W'),
+          el('span', { class: 'control-key' }, 'S'),
+          el('span', { class: 'control-label' }, 'Joueur de gauche'),
+        ),
+        el('div', { class: 'text-center' },
+          el('span', { class: 'control-key' }, '↑'),
+          el('span', { class: 'control-key' }, '↓'),
+          el('span', { class: 'control-label' }, 'Joueur de droite'),
         ),
       ),
     ),
   );
 
-  return node;
+  const stop = startAttract(canvas);
+
+  // Contrat du routeur : quitter la page arrete la boucle d'animation.
+  return { node, cleanup: stop };
 }

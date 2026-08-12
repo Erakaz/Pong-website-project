@@ -11,6 +11,7 @@ import { el } from '../dom.js';
 import { KeyboardControls } from '../game/input.js';
 import { MatchSocket } from '../game/net.js';
 import { PongRenderer } from '../game/renderer.js';
+import * as sound from '../game/sound.js';
 import { alert as alertBox, pageHeader, toast } from '../ui.js';
 
 const STATUS_LABELS = {
@@ -52,7 +53,7 @@ export default async function render(context) {
 
   const scoreboard = el('div', { class: 'scoreboard d-flex justify-content-center align-items-center gap-4 mb-3' },
     el('div', { class: 'text-end flex-grow-1' }, leftName, scoreLeft),
-    el('div', { class: 'text-body-secondary' }, 'vs'),
+    el('div', { class: 'vs' }, 'vs'),
     el('div', { class: 'text-start flex-grow-1' }, rightName, scoreRight),
   );
 
@@ -64,6 +65,18 @@ export default async function render(context) {
   });
 
   const statusBadge = el('span', { class: 'badge text-bg-secondary' }, STATUS_LABELS.connecting);
+
+  const soundButton = el('button', {
+    class: 'btn btn-sm btn-outline-light',
+    type: 'button',
+    'aria-pressed': String(sound.isEnabled()),
+    onClick: (event) => {
+      const next = !sound.isEnabled();
+      sound.setEnabled(next);
+      event.currentTarget.textContent = next ? 'Son ●' : 'Son ○';
+      event.currentTarget.setAttribute('aria-pressed', String(next));
+    },
+  }, sound.isEnabled() ? 'Son ●' : 'Son ○');
   const hint = el('p', { class: 'text-body-secondary text-center small mt-3 mb-0' }, '');
   const banner = el('div', { class: 'd-none' });
 
@@ -72,7 +85,8 @@ export default async function render(context) {
       {
         subtitle: `Premier a ${match.points_to_win} point`
           + `${match.points_to_win > 1 ? 's' : ''}.`,
-        actions: statusBadge,
+        actions: el('div', { class: 'd-flex align-items-center gap-2' },
+          soundButton, statusBadge),
       }),
     banner,
     scoreboard,
@@ -153,7 +167,10 @@ export default async function render(context) {
 
     onEvents(message) {
       for (const event of message.events) {
+        // Les evenements du moteur pilotent le son et l'eclat du score : le
+        // client ne devine rien, il reagit a ce que le serveur annonce.
         if (event.type === 'score') renderer.pulse();
+        sound.play(event.type === 'serve' ? 'wall' : event.type);
       }
     },
 
@@ -232,6 +249,7 @@ export default async function render(context) {
     cleanup() {
       socket.close();
       renderer.stop();
+      sound.dispose();
       if (controls) controls.detach();
     },
   };
