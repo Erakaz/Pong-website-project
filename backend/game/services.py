@@ -76,8 +76,19 @@ def join_remote_match(match_id, user) -> Match:
 @transaction.atomic
 def finish_match(match_id, snapshot: dict, stats: dict, *, forfeit: bool = False,
                  points_log: list | None = None) -> Match:
-    """Fige le resultat puis fait progresser le tournoi si le match en fait partie."""
-    match = Match.objects.select_for_update().select_related("tournament").get(pk=match_id)
+    """Fige le resultat puis fait progresser le tournoi si le match en fait partie.
+
+    `of=("self",)` restreint le verrou a la ligne du match. Sans lui, PostgreSQL
+    refuse la requete : `select_related("tournament")` produit un LEFT OUTER
+    JOIN (le tournoi est facultatif), et un `SELECT ... FOR UPDATE` ne peut pas
+    porter sur le cote nullable d'une jointure externe. SQLite, lui, ignore
+    purement et simplement `FOR UPDATE` — d'ou une erreur invisible tant qu'on
+    ne teste pas sur la vraie base.
+    """
+    match = (Match.objects
+             .select_for_update(of=("self",))
+             .select_related("tournament")
+             .get(pk=match_id))
     if match.state == Match.STATE_FINISHED:
         return match          # deja enregistre (double appel possible a l'arret)
 

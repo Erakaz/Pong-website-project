@@ -11,8 +11,11 @@ PASSWORD = "Correct-Horse-42"
 class RateLimitTest(TestCase):
     def setUp(self):
         User.objects.create_user(email="ada@42.lu", display_name="Ada", password=PASSWORD)
-        # Le compteur en memoire est un etat de module : on repart de zero.
-        ratelimit._memory.clear()
+        # Les compteurs sont un etat partage, en memoire ou dans Redis selon ce
+        # qui est disponible : chaque cas doit repartir de zero, sans quoi les
+        # tests se bloquent mutuellement des que Redis est joignable.
+        ratelimit.reset()
+        self.addCleanup(ratelimit.reset)
 
     def login(self, password=PASSWORD, ip="203.0.113.7"):
         return self.client.post("/api/auth/login", {"email": "ada@42.lu",

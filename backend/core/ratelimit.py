@@ -91,6 +91,24 @@ def hit(bucket: str, identity: str) -> tuple[bool, int]:
     return (count <= limit), window
 
 
+def reset() -> None:
+    """Remet tous les compteurs a zero. Reserve aux tests.
+
+    Vide le compteur en memoire ET les cles Redis : sans le second, une suite
+    de tests qui tourne avec Redis disponible voit ses cas se bloquer les uns
+    les autres, alors que la meme suite passe sans Redis.
+    """
+    _memory.clear()
+    client = _redis()
+    if client is None:
+        return
+    try:
+        for key in client.scan_iter(match="ratelimit:*", count=500):
+            client.delete(key)
+    except Exception:
+        logger.warning("Purge des compteurs Redis impossible")
+
+
 def client_identity(request) -> str:
     """Adresse de l'appelant, telle que nginx la transmet.
 
